@@ -6,7 +6,8 @@ import { executeToolDefinition } from '../../src/core/tools.ts';
 import { createFixtureFetch } from '../../src/fixtures/transport.ts';
 import { freshdeskFixtureRoutes } from '../../src/providers/freshdesk/routes.ts';
 import { woocommerceFixtureRoutes } from '../../src/providers/woocommerce/routes.ts';
-import { freshdeskTools, woocommerceTools, zohoTools } from '../helpers.ts';
+import { unicommerceFixtureRoutes } from '../../src/providers/unicommerce/routes.ts';
+import { freshdeskTools, woocommerceTools, zohoTools, unicommerceTools } from '../helpers.ts';
 
 /**
  * Security tests: prove (not just promise) that credentials and real customer
@@ -149,6 +150,83 @@ describe('Zoho Inventory secrets never reach logs, errors, output or URLs', () =
     expect(result.isError).toBe(true);
     assertNoZohoSecrets(JSON.stringify(result));
     expect(JSON.stringify(result)).toContain('AUTHENTICATION_ERROR');
+  });
+});
+
+describe('Unicommerce secrets never reach logs, errors, output or URLs', () => {
+  // Fixture OAuth values (providers/unicommerce/config.ts).
+  const REFRESH_TOKEN = 'fixture-refresh-token-not-a-real-value';
+  const ACCESS_TOKEN = 'fixture-unicommerce-access-token-not-real';
+
+  function assertNoSecrets(serialized: string): void {
+    expect(serialized).not.toContain(REFRESH_TOKEN);
+    expect(serialized).not.toContain(ACCESS_TOKEN);
+    expect(serialized).not.toContain('bearer ');
+    expect(serialized).not.toContain('grant_type');
+  }
+
+  it('covers success, application-error, auth-failure and rate-limit flows', async () => {
+    const scenarios: FetchLike[] = [
+      // success against fixtures
+      createFixtureFetch({ routes: unicommerceFixtureRoutes() }),
+      // documented application-error channel
+      async (url) =>
+        url.includes('/oauth/token')
+          ? new Response(JSON.stringify({ access_token: ACCESS_TOKEN, token_type: 'bearer', expires_in: 3600 }), {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            })
+          : new Response(
+              JSON.stringify({
+                successful: false,
+                message: 'Invalid sale order code',
+                errors: [{ code: 40005, fieldName: 'code', description: 'x', message: 'Invalid sale order code' }],
+                warnings: [],
+              }),
+              { status: 200, headers: { 'content-type': 'application/json' } },
+            ),
+      // token rejected (documented INVALID_TOKEN code)
+      async () =>
+        new Response(
+          JSON.stringify({ successful: false, message: 'Invalid token', errors: [{ code: 100209, message: 'Invalid token' }], warnings: [] }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        ),
+      // rate limited
+      async () => new Response(JSON.stringify({ message: 'Too many requests' }), { status: 429, headers: { 'content-type': 'application/json' } }),
+    ];
+
+    for (const fetchImpl of scenarios) {
+      const { byName, logger } = unicommerceTools({ fetchImpl });
+      await executeToolDefinition(byName.get('unicommerce_search_sale_orders')!, {});
+      const result = await executeToolDefinition(byName.get('unicommerce_get_sale_order')!, { code: 'SO1016233' });
+      assertNoSecrets(JSON.stringify(result));
+      assertNoSecrets(JSON.stringify(logger.entries));
+      // The authorization header is never logged either.
+      expect(JSON.stringify(logger.entries)).not.toContain('authorization');
+    }
+  });
+
+  it('the token request carries the documented refresh grant', async () => {
+    // Unicommerce documents the token endpoint as a GET with query parameters, so
+    // the refresh token necessarily appears in that URL. What must hold is that
+    // the URL is never logged and the token never reaches an error payload.
+    const urls: string[] = [];
+    const inner = createFixtureFetch({ routes: unicommerceFixtureRoutes() });
+    const fetchImpl: FetchLike = async (url, init) => {
+      urls.push(`${init.method ?? 'GET'} ${url}`);
+      return inner(url, init);
+    };
+    const { byName, logger } = unicommerceTools({ fetchImpl });
+    const result = await executeToolDefinition(byName.get('unicommerce_search_sale_orders')!, {});
+    expect(result.isError).toBeUndefined();
+
+    const tokenCall = urls.find((u) => u.includes('/oauth/token'))!;
+    expect(tokenCall).toContain('grant_type=refresh_token');
+    expect(tokenCall).toContain('client_id=my-trusted-client');
+    // ...and the URL is not logged anywhere.
+    expect(JSON.stringify(logger.entries)).not.toContain('grant_type');
+    assertNoSecrets(JSON.stringify(logger.entries));
+    assertNoSecrets(JSON.stringify(result));
   });
 });
 

@@ -55,6 +55,7 @@ function summarize(data: Record<string, unknown>): Record<string, unknown> {
   if (data['product']) out['product'] = data['product'];
   if (data['item']) out['item'] = data['item'];
   if (data['salesOrder']) out['salesOrder'] = data['salesOrder'];
+  if (data['saleOrder']) out['saleOrder'] = data['saleOrder'];
   if (data['query']) out['query'] = data['query'];
   if (data['ticketId'] !== undefined) out['ticketId'] = data['ticketId'];
   if (data['perPage'] !== undefined) out['perPage'] = data['perPage'];
@@ -186,6 +187,33 @@ async function main(): Promise<void> {
   const refreshDemo = build(transientToken);
   await show('zoho 401 -> refresh', refreshDemo.tools, 'zoho_list_items', { sku: 'ACC-BLUE-M' });
   process.stdout.write(`  token exchanges: ${zohoTokenHolder.calls} (initial + 1 refresh)\n`);
+
+  heading('STEP 14 | Unicommerce (fourth provider: POST+JSON body, documented envelope)');
+  await show('unicommerce search', base.tools, 'unicommerce_search_sale_orders', { status: 'PROCESSING' });
+  await show('unicommerce order', base.tools, 'unicommerce_get_sale_order', { code: 'SO1016233' });
+
+  heading('STEP 15 | Unicommerce failure: documented application error (HTTP 200 + errors[])');
+  // Unicommerce reports rejected requests in the BODY, not the status line, so the
+  // connector must classify `successful:false` + `errors[]` - otherwise a rejected
+  // call would silently look like "no orders found".
+  const uniAppError = build(async (url) => {
+    if (url.includes('/oauth/token')) {
+      return new Response(JSON.stringify({ access_token: 'demo.unicommerce.token', token_type: 'bearer', expires_in: 3600 }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    return new Response(
+      JSON.stringify({
+        successful: false,
+        message: 'Invalid sale order code',
+        errors: [{ code: 40005, fieldName: 'code', description: 'Invalid sale order code', message: 'Invalid sale order code' }],
+        warnings: [],
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+  });
+  await show('unicommerce app-error', uniAppError.tools, 'unicommerce_get_sale_order', { code: 'SO-NOT-REAL' });
 
   heading('DEMO COMPLETE');
   process.stdout.write(

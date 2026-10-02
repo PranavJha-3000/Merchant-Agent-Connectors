@@ -1,4 +1,4 @@
-﻿# Demo
+# Demo
 
 ```bash
 npm run demo            # deterministic, zero credentials, zero network
@@ -14,8 +14,8 @@ Run time is about one second. Only `fetchedAt`/`ts` fields differ between runs.
 
 ## Transcript outline
 
-**STEP 1 - Tool discovery.** Lists the twelve tools (4 Freshdesk +
-4 WooCommerce + 4 Zoho Inventory) with their first description line and
+**STEP 1 - Tool discovery.** Lists the fourteen tools (4 Freshdesk +
+4 WooCommerce + 4 Zoho Inventory + 2 Unicommerce) with their first description line and
 read-only annotations, i.e. exactly what `tools/list` advertises.
 
 **STEP 2 - Search.** `freshdesk_search_tickets({ query: 'status:2 AND priority:3' })`
@@ -99,7 +99,7 @@ reorder level (`stockOnHand: 8` next to `reorderLevel: 20`), and
 `zoho_get_sales_order({ salesOrderId: '4815000000045208' })` returns line items
 and shipment progress (`shipmentDate: null`, `isBackorder: true`). Behind the
 scenes the connector exchanged its refresh token for an access token in memory
-and sent `Authorization: Zoho-oauthtoken …` - neither the token nor the
+and sent `Authorization: Zoho-oauthtoken �` - neither the token nor the
 `organization_id` argument appears in any tool output.
 
 **STEP 12 - Zoho failure (404).** `zoho_get_item({ itemId: '4815000000099999' })`
@@ -111,6 +111,20 @@ AuthToken)`. The connector performs **one** refresh-token exchange, replays the
 request once, and the agent sees a normal success. The demo prints
 `token exchanges: 2 (initial + 1 refresh)`, and the test suite asserts exactly
 that count - proving refresh-once + singleflight rather than a retry loop.
+
+**STEP 14 - Unicommerce (fourth provider, POST + JSON body).**
+`unicommerce_search_sale_orders({ status: 'PROCESSING' })` returns the thin
+search rows with a real `total` from the documented `totalRecords`, and
+`unicommerce_get_sale_order({ code: 'SO1016233' })` returns line items with the
+documented enums (`PACKED` -> "Packed", `STD` -> "Standard"), the facility that
+will fulfil each line, and epoch-millisecond timestamps normalized to ISO-8601.
+
+**STEP 15 - Unicommerce failure (the interesting one).** A rejected Unicommerce
+request still returns **HTTP 200**, with `successful: false` and a documented
+error code in `errors[]`. The demo returns exactly that shape and the agent sees
+`VALIDATION_ERROR`, `retryable: false`, message
+"Unicommerce reported an application error � Invalid sale order code (code
+40005)" - never an empty result list that would read as "no orders found".
 
 ## Reviewer script
 

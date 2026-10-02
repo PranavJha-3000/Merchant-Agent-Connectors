@@ -6,7 +6,7 @@ npm test -- test/security    # security assertions only
 npm run build                # typecheck (tsc)
 ```
 
-Current status: **206 passing, 1 skipped** (the skipped one is the opt-in live
+Current status: **241 passing, 1 skipped** (the skipped one is the opt-in live
 test). Every test runs without network access or credentials.
 
 ## Categories

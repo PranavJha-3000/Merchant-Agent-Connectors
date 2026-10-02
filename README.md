@@ -1,10 +1,9 @@
-﻿# Merchant Agent Connectors
+# Merchant Agent Connectors
 
 An MCP connector platform that gives AI agents secure, semantic access to merchant
-systems. **Freshdesk is the reference implementation**; **WooCommerce** and
-**Zoho Inventory** are additional providers plugged into the same architecture
-via the same extension seam, with no shared code duplicated. Unicommerce follows
-that seam without touching existing providers.
+systems. **Freshdesk is the reference implementation**; **WooCommerce**,
+**Zoho Inventory** and **Unicommerce** are additional providers plugged into the
+same architecture via the same extension seam, with no shared code duplicated.
 
 The whole test suite and demo run with **zero credentials** (deterministic fixture
 mode).
@@ -34,9 +33,9 @@ AI Agent / MCP Host
 | Provider | Status | Auth | Read capabilities |
 |---|---|---|---|
 | **Freshdesk** | reference implementation | API key (HTTP Basic) | tickets: list, get, search, conversations |
-| **WooCommerce** | implemented (Phase 4) | REST API key (HTTPS Basic) | orders: list, get · products: list, get |
-| **Zoho Inventory** | implemented (Phase 5) | OAuth 2.0 (refresh token, in-memory) | items: list, get · sales orders: list, get |
-| Unicommerce | designed, not implemented | OAuth token (docs verified in part) | sale orders (planned) |
+| **WooCommerce** | implemented (Phase 4) | REST API key (HTTPS Basic) | orders: list, get � products: list, get |
+| **Zoho Inventory** | implemented (Phase 5) | OAuth 2.0 (refresh token, in-memory) | items: list, get � sales orders: list, get |
+| **Unicommerce** | implemented (Phase 6) | OAuth 2.0 refresh grant (tenant host) | sale orders: search, get |
 
 Full matrix and verification status: [`docs/provider-matrix.md`](docs/provider-matrix.md).
 Honest gaps: [`docs/limitations.md`](docs/limitations.md).
@@ -101,6 +100,10 @@ ZOHO_ORGANIZATION_ID=10234695          # Manage Organizations in the admin conso
 ZOHO_CLIENT_ID=1000.xxxx               # OAuth app "Client ID"
 ZOHO_CLIENT_SECRET=xxxx                # OAuth app "Client Secret"
 ZOHO_REFRESH_TOKEN=1000.xxxx.xxxx      # obtained once via the auth-code flow
+
+# Unicommerce (OAuth 2.0 - see docs/providers/unicommerce.md)
+UNICOMMERCE_BASE_URL=https://yourtenant.unicommerce.com
+UNICOMMERCE_REFRESH_TOKEN=your-refresh-token   # obtained once via the password grant
 ```
 
 Zoho setup is a one-time operator step (the browser authorization-code flow with
@@ -135,6 +138,8 @@ never logged.
 | Check price and stock state of a product | `woocommerce_get_product` |
 | Check real stock levels / what needs reordering | `zoho_list_items` (`sku`, `filterBy: 'Status.Lowstock'`) |
 | Review the order book and shipment progress | `zoho_list_sales_orders`, `zoho_get_sales_order` |
+| Find a sale order by code / status / channel | `unicommerce_search_sale_orders`, `unicommerce_get_sale_order` |
+| Check which facility and shelf will fulfil a line | `unicommerce_get_sale_order` |
 
 It cannot write anything, and it is told (in tool descriptions) to never quote
 private agent notes to a customer. See [`docs/agent-capabilities.md`](docs/agent-capabilities.md).
@@ -155,7 +160,7 @@ private agent notes to a customer. See [`docs/agent-capabilities.md`](docs/agent
 | [`docs/providers/freshdesk.md`](docs/providers/freshdesk.md) | Verified Freshdesk behaviors + sources |
 | [`docs/providers/woocommerce.md`](docs/providers/woocommerce.md) | Verified WooCommerce endpoints/parameters/auth + UNVERIFIED table |
 | [`docs/providers/zoho-inventory.md`](docs/providers/zoho-inventory.md) | Verified Zoho OAuth/data-center/limits facts + UNVERIFIED table |
-| [`docs/providers/unicommerce.md`](docs/providers/unicommerce.md) | Unicommerce status: what is verified and what is explicitly UNVERIFIED |
+| [`docs/providers/unicommerce.md`](docs/providers/unicommerce.md) | Verified Unicommerce OAuth/sale-order/error facts + UNVERIFIED table |
 | [`docs/limitations.md`](docs/limitations.md) | What is not built, unverified, or intentionally excluded |
 
 ## Security

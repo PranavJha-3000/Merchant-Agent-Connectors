@@ -19,8 +19,12 @@ export interface FixtureReply {
 
 export interface FixtureRoute {
   match: (url: URL) => boolean;
-  /** callIndex is 0 for the first call to this route, 1 for the second, … */
-  respond: (url: URL, callIndex: number) => FixtureReply;
+  /**
+   * callIndex is 0 for the first call to this route, 1 for the second, …
+   * `init` carries the request init so routes can inspect a POST body (the
+   * optional third argument keeps every existing route valid).
+   */
+  respond: (url: URL, callIndex: number, init?: RequestInit) => FixtureReply;
 }
 
 export interface FixtureFetchOptions {
@@ -38,7 +42,7 @@ export function createFixtureFetch(options: FixtureFetchOptions): FetchLike {
       if (!route.match(url)) continue;
       const callIndex = counters.get(route) ?? 0;
       counters.set(route, callIndex + 1);
-      const reply = route.respond(url, callIndex);
+      const reply = route.respond(url, callIndex, init);
       const body = reply.rawText ?? (reply.json !== undefined ? JSON.stringify(reply.json) : null);
       return new Response(body, { status: reply.status, headers: { 'content-type': 'application/json', ...(reply.headers ?? {}) } });
     }

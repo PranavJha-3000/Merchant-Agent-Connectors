@@ -87,7 +87,7 @@ describe('documentation integrity', () => {
   it('every implemented provider documents its verified sources and UNVERIFIED gaps', () => {
     // Each shipped connector must cite official docs and be explicit about what
     // could not be verified (AGENTS.md §13).
-    for (const provider of ['freshdesk', 'woocommerce', 'zoho-inventory']) {
+    for (const provider of ['freshdesk', 'woocommerce', 'zoho-inventory', 'unicommerce']) {
       const page = readFileSync(new URL(`docs/providers/${provider}.md`, repoRoot), 'utf8');
       expect(page, `${provider} doc must cite official sources`).toContain('https://');
       expect(page, `${provider} doc must mark unverified items`).toContain('UNVERIFIED');
@@ -99,10 +99,11 @@ describe('documentation integrity', () => {
     const matrix = readFileSync(new URL('docs/provider-matrix.md', repoRoot), 'utf8');
     for (const id of ['freshdesk', 'woocommerce', 'zoho-inventory', 'unicommerce']) {
       expect(matrix, `matrix must list ${id}`).toContain(`\`${id}\``);
+      // All four target providers are implemented; none may still be marked as
+      // pending design work.
+      const row = matrix.split('\n').find((l) => l.includes(`\`${id}\``));
+      expect(row, `matrix row for ${id}`).toBeDefined();
+      expect(row!, `${id} row must not be marked unimplemented`).not.toMatch(/designed, not/);
     }
-    // Unicommerce is the only one still unimplemented - the matrix must say so.
-    const unicommerceRow = matrix.split('\n').find((l) => l.includes('`unicommerce`'));
-    expect(unicommerceRow).toBeDefined();
-    expect(unicommerceRow!).toContain('not yet implemented');
   });
 });

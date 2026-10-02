@@ -23,6 +23,8 @@ describe('MCP server (stdio-agnostic, in-memory protocol)', () => {
       'freshdesk_list_ticket_conversations',
       'freshdesk_list_tickets',
       'freshdesk_search_tickets',
+      'unicommerce_get_sale_order',
+      'unicommerce_search_sale_orders',
       'woocommerce_get_order',
       'woocommerce_get_product',
       'woocommerce_list_orders',

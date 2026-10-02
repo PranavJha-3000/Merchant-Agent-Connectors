@@ -18,6 +18,8 @@ What the connector lets an agent do today, and how it is steered.
 | `zoho_get_item` | Fetch one item by id (stock on hand, reorder level, tax, codes) |
 | `zoho_list_sales_orders` | Page through Zoho sales orders (shipment state, totals) |
 | `zoho_get_sales_order` | Fetch one sales order by id (line items, shipment progress) |
+| `unicommerce_search_sale_orders` | Find Unicommerce sale orders (code, status, channel, customer, date window) |
+| `unicommerce_get_sale_order` | Fetch one sale order by code (item status, facility, shipping method, prices) |
 
 Full contract: `docs/tool-spec.md`.
 
@@ -54,10 +56,16 @@ exact lookup, or `filterBy: 'Status.Lowstock'` for "what needs reordering?" -
 each item carries `stockOnHand` next to `reorderLevel`, which is the comparison a
 support agent actually needs.
 
-**Check where an order is.** `zoho_list_sales_orders` pages the order book;
-`zoho_get_sales_order` shows shipment progress (`quantityShipped`,
+**Check where an order is (Zoho).** `zoho_list_sales_orders` pages the order
+book; `zoho_get_sales_order` shows shipment progress (`quantityShipped`,
 `shipmentDate`, `isBackorder`) plus line items - i.e. "why is SO-00004 late?" is
 answerable without leaving the connector.
+
+**Check where an order is being fulfilled (Unicommerce).**
+`unicommerce_search_sale_orders` pages the order book by status/channel/date, and
+`unicommerce_get_sale_order` shows per-line fulfilment state - item status,
+which facility and shelf will ship it, shipping method and prices. That is the
+only connector that answers "which warehouse is picking this?"
 
 **Keep tenants separated.** Zoho requests always carry the configured
 `organization_id`; an agent cannot query another organization because the tool
@@ -85,7 +93,7 @@ schemas do not accept one.
 
 - Create, update, close, reply to, or delete anything (all providers are read-only)
 - Access attachments, contact records, refunds, or order notes
-- Reach Unicommerce today (designed, not implemented - see `docs/provider-matrix.md`)
+- Write anything in Unicommerce (create/verify/hold/cancel sale orders)
 - Filter WooCommerce orders by customer email (upstream documents no such parameter)
 - Filter Zoho sales orders by status/date/customer (upstream documents no such parameter)
 - Choose which Zoho organization is queried (`organization_id` is configuration)
@@ -109,5 +117,6 @@ schemas do not accept one.
 | "Do we still have ACC-BLUE-M?" | `zoho_list_items({ sku: 'ACC-BLUE-M' })` |
 | "What needs reordering?" | `zoho_list_items({ filterBy: 'Status.Lowstock' })` |
 | "Why is SO-00004 late?" | `zoho_get_sales_order({ salesOrderId: '4815000000045208' })` |
+| "Which facility will fulfil SO1016233?" | `unicommerce_get_sale_order({ code: 'SO1016233' })` |
 
 These flows are also expressed as deterministic tests in `docs/evaluation.md`.

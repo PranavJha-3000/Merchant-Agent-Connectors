@@ -411,6 +411,83 @@ isBackorder, lineItems[], itemCount`).
 
 ---
 
+## unicommerce_search_sale_orders
+
+**Purpose** - search Unicommerce sale orders with documented filters and paging.
+
+**Use when** - you need to find an order (no code yet), review the order book, or
+filter by status/channel/customer/date.
+
+**DO NOT use when** - you already have a sale order code
+(`unicommerce_get_sale_order`); search rows return only a summary.
+
+**Input** - all optional unless noted:
+
+| Field | Type | Notes |
+|---|---|---|
+| `page` / `perPage` | integer | `page` starts at 1 and maps to the documented offset pair; `perPage` default 50 / max 100 are **connector** values (no documented default or max for `displayLength`) |
+| `displayOrderCode` | string | the documented order-code filter - use it for exact lookups |
+| `status` | enum | `PENDING_VERIFICATION` \| `CANCELLED` \| `CREATED` \| `PROCESSING` \| `COMPLETE` |
+| `channel` | string | tenant-specific channel code |
+| `searchKey` | string | `searchOptions.searchKey`; match behavior undocumented |
+| `customerEmailOrMobile`, `customerName` | string | documented customer filters |
+| `cod` | boolean | documented as "true if COD" with "Default: true" - **UNVERIFIED** default semantics, sent only when explicitly set |
+| `fromDate` / `toDate` | ISO-8601 | window, meaningful together with `dateType` |
+| `dateType` | enum | `CREATED` \| `UPDATED` \| `FULFILLMENT_TAT` |
+| `facilityCodes` | string[] | warehouse facility filter |
+| `onHold` | boolean | on-hold filter |
+
+**Output** - page envelope `{ provider, fetchedAt, page, perPage, hasMore, total,
+items[] }` where `total` comes from the documented `totalRecords` and `hasMore`
+is derived from it. Items are `UnicommerceSaleOrderSummary`: `{ provider, code,
+displayOrderCode, channel, source, status, orderDate, createdAt, updatedAt,
+fulfillmentTat, isCashOnDelivery, currencyCode, notificationEmail,
+notificationMobile }`. Timestamps are ISO-8601 (upstream epoch millis).
+
+**Failure semantics** - HTTP 200 with `successful: false` and `errors[]` (the
+documented Unicommerce channel) becomes `VALIDATION_ERROR` with `retryable:
+false` and the upstream code quoted; documented auth codes become
+`AUTHENTICATION_ERROR`; 429 is `RATE_LIMITED` with a hint that no rate limit is
+published. Empty match = success with `items: []`.
+
+**Security** - read-only. Customer contact fields are customer data - keep them
+inside the merchant context.
+
+**Kind** - provider-specific tool wrapping the new `SaleOrderSearchable`
+capability.
+
+---
+
+## unicommerce_get_sale_order
+
+**Purpose** - fetch one Unicommerce sale order by its code, including line items
+with item status, facility, shipping method and prices.
+
+**Use when** - you already have a sale order code.
+
+**DO NOT use when** - you only have a customer email/name, or no code at all.
+
+**Input** - `code` (string, required): the documented **only mandatory** request
+field.
+
+**Output** - `{ provider, fetchedAt, saleOrder }` where `saleOrder` is
+`UnicommerceSaleOrderDetail` (summary plus `customerCode`, `customerGstin`,
+`priority`, `thirdPartyShipping`, `onHold`, `cancellable`, `reversePickable`,
+`channelProcessingTime`, `additionalInfo`, `totalDiscount`,
+`totalShippingCharges`, billing city/state/country/pincode, `items[]`,
+`itemCount`). Items expose `status` (12-value documented enum), `shippingMethodCode`
+(`STD`/`EXP`/`PKP`/`CHQ`), `facilityCode`, `shelfCode`, `shippingPackageCode` and
+numeric prices.
+
+**Failure semantics** - an unknown code returns the documented application error
+as `VALIDATION_ERROR` with `retryable: false` and the Unicommerce error code.
+
+**Security** - read-only; contains customer name/contact/billing fields.
+
+**Kind** - provider-specific tool wrapping `SaleOrderReadable`.
+
+---
+
 ## Planned tools (not implemented)
 
 Design intent only; each requires verification before implementation. See

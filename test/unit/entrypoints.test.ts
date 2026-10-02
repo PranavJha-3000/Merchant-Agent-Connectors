@@ -38,7 +38,7 @@ describe('entrypoint output portability', () => {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     });
-    for (let step = 1; step <= 13; step += 1) {
+    for (let step = 1; step <= 15; step += 1) {
       expect(output, `demo stopped before STEP ${step}`).toContain(`STEP ${step} |`);
     }
     expect(output).toContain('DEMO COMPLETE');
@@ -62,5 +62,10 @@ describe('entrypoint output portability', () => {
     // No token may ever be printed.
     expect(output).not.toContain('Zoho-oauthtoken');
     expect(output).not.toContain('demo_token_');
+    // Fourth provider: the documented HTTP-200 application-error channel.
+    expect(output).toContain('STEP 15 |');
+    expect(output).toContain('"provider": "unicommerce"');
+    expect(output).toContain('code 40005');
+    expect(output).not.toContain('fixture-unicommerce-access-token');
   });
 });

@@ -71,7 +71,26 @@ Task 8 asserts the call counter never moves, encoding "validation happens before
 any network I/O - including OAuth" as a testable property. Task 11 asserts the
 token lifecycle is invisible to the agent.
 
-## Cross-provider routing (all three implemented)
+## Tasks (Unicommerce, all deterministic)
+
+| # | Task id | Scenario | Tool | Expected outcome |
+|---|---|---|---|---|
+| 1 | `locate-order-by-code` | Merchant quotes an order code | `unicommerce_get_sale_order` (`code`) | success with line items |
+| 2 | `orders-by-status` | "Which orders are processing?" | `unicommerce_search_sale_orders` (`status`) | success, every result has that status |
+| 3 | `channel-and-date-filter` | "Any Amazon orders in this window?" | `unicommerce_search_sale_orders` (`channel` + `dateType` + dates) | success, every result is that channel |
+| 4 | `fulfilment-state` | "Is it on hold, and who ships it?" | `unicommerce_get_sale_order` | `onHold: true`, `facilityCode` present, numeric prices |
+| 5 | `paging-with-total` | Page 1 of 2 with `perPage: 2` | `unicommerce_search_sale_orders` | `total: 3` from `totalRecords`, `hasMore` flips on page 1 |
+| 6 | `no-match-is-success` | Nothing matches the code | `unicommerce_search_sale_orders` | success with `items: []` |
+| 7 | `app-error-not-empty-result` | Unknown order code | `unicommerce_get_sale_order` | `VALIDATION_ERROR`, `retryable: false`, upstream code quoted |
+| 8 | `reject-invalid-arguments-pre-network` | Empty `code` | `unicommerce_get_sale_order` | `VALIDATION_ERROR` and **zero** upstream calls |
+| 9 | `undocumented-enum-rejected` | Invented `status`/`dateType` | `unicommerce_search_sale_orders` | `VALIDATION_ERROR` - unverified values cannot reach the API |
+| 10 | `token-never-leaks` | Normal read | `unicommerce_search_sale_orders` | exactly ONE token exchange and no token/URL in the response |
+
+Task 8 asserts the call counter never moves ("validation before any network
+I/O - including OAuth"); task 7 is the Unicommerce-specific trap where a
+rejected request arrives as HTTP 200 and must not look like an empty list.
+
+## Cross-provider routing (all four implemented)
 
 | Merchant request | Correct tool | Why not the others |
 |---|---|---|

@@ -3,15 +3,16 @@
 This file is the honest counterweight to the rest of the documentation. Anything
 unverified is labelled UNVERIFIED and is deliberately **not** implemented.
 
-## 1. Three providers are implemented; one is not
+## 1. All four target providers are implemented
 
-Freshdesk (reference), WooCommerce (Phase 4) and Zoho Inventory (Phase 5) are
-complete. Unicommerce is **designed but not implemented**. Adding a provider is a
-deliberate, gated step (`docs/adding-a-provider.md`), not a matter of dropping
-in a URL.
+Freshdesk (reference), WooCommerce (Phase 4), Zoho Inventory (Phase 5) and
+Unicommerce (Phase 6) are complete read-only integrations. Each was gated on the
+previous one's quality bar, and each added a new capability shape (OAuth 2.0
+twice, POST-with-JSON-body, application-level error envelopes) without changing
+existing providers' behavior.
 
-Rationale: one reference-quality vertical slice is more valuable than three
-shallow connectors; expansion proceeds only while quality holds. See
+Rationale: a reference-quality vertical slice plus three genuinely different
+upstream shapes is more valuable than more connectors of the same kind. See
 `docs/provider-matrix.md` for status.
 
 ## 2. Read-only
@@ -83,7 +84,28 @@ Per AGENTS.md §3: no frontend, database, user accounts, billing, Kubernetes,
 microservices, cloud deployment, webhooks, background jobs, distributed queues,
 dashboards, model hosting, or complex caching.
 
-## 7. Accepted trade-offs
+## 7. Unicommerce behaviors that remain UNVERIFIED
+
+Full table with consequences: `docs/providers/unicommerce.md`. Summary:
+
+- **Rate limits are not documented anywhere** we could find (OAuth, sale-order,
+  response-code and URL-detail pages all searched). Live pacing is a
+  connector-imposed 1s and the 429 hint states plainly that the budget is unknown.
+- **HTTP status taxonomy** - the published catalog covers response-body codes
+  only, so HTTP-level failures map by the shared status rules.
+- **`cashOnDelivery`** - documented as "true if COD" with "Default: true"; what
+  that default does when absent is unknown, so the field is sent only when
+  explicitly set and the tool description warns about it.
+- **Error code for an unknown order code** - `INVALID_SALE_ORDER_CODE 40005`
+  exists but is not documented as the response for a non-existent code, so no
+  NOT_FOUND mapping is invented; the upstream code is quoted instead.
+- **Password grant** - documented and working, but not automated: storing a
+  Uniware login password in the connector is a worse credential story than
+  configuring the refresh token it yields.
+- **Sorting parameters** - documented but tied to tenant-specific UI column
+  sets, so they are not exposed.
+
+## 8. Accepted trade-offs
 
 | Trade-off | Why accepted |
 |---|---|
@@ -94,7 +116,7 @@ dashboards, model hosting, or complex caching.
 | Only stdio transport is wired | Streamable HTTP is designed for (`createConnectorServer` is transport-agnostic) but no host requires it yet. |
 | Unicommerce API paths | Token endpoint verified from official docs; sale-order search/get paths are **UNVERIFIED**, so no code was written. See `docs/providers/unicommerce.md`. |
 
-## 8. What a reviewer should not assume
+## 9. What a reviewer should not assume
 
 - The connector does not retry non-idempotent or semantic failures, and never
   writes merchant state.

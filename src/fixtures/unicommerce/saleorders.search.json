@@ -1,0 +1,42 @@
+{
+  "successful": true,
+  "message": "Success",
+  "errors": [],
+  "warnings": [],
+  "totalRecords": 3,
+  "elements": [
+    {
+      "code": "SO1016233",
+      "displayOrderCode": "AMZ-778812",
+      "channel": "AMAZON",
+      "status": "PROCESSING",
+      "displayOrderDateTime": 1598293800000,
+      "created": 1598335400000,
+      "updated": 1598335500000,
+      "notificationEmail": "buyer.one@example.com",
+      "notificationMobile": "9999999999"
+    },
+    {
+      "code": "SO1016402",
+      "displayOrderCode": "FK-554301",
+      "channel": "FLIPKART",
+      "status": "CREATED",
+      "displayOrderDateTime": "2020-06-11T10:28:36.079Z",
+      "created": "2020-06-11T10:30:00.000Z",
+      "updated": "2020-06-11T10:30:00.000Z",
+      "notificationEmail": "buyer.two@example.com",
+      "notificationMobile": "9888888888"
+    },
+    {
+      "code": "SO1016510",
+      "displayOrderCode": "CUST-00042",
+      "channel": "CUSTOM",
+      "status": "COMPLETE",
+      "displayOrderDateTime": 1598371800000,
+      "created": 1598371900000,
+      "updated": 1598390000000,
+      "notificationEmail": "buyer.three@example.com",
+      "notificationMobile": "9777777777"
+    }
+  ]
+}

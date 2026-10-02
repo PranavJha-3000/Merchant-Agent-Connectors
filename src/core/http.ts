@@ -43,6 +43,24 @@ export interface GetSpec {
   timeoutMs?: number;
 }
 
+/**
+ * POST with a JSON body. Some upstreams (VERIFIED: Unicommerce's
+ * `POST /services/rest/v1/oms/saleOrder/search` and `.../saleorder/get`) take
+ * their parameters as a JSON request body rather than in the query string.
+ *
+ * This is transport plumbing only - the same pipeline (auth header injection,
+ * timeout, bounded retry, Retry-After, 401 refresh-replay, pacing, concurrency,
+ * redaction, correlation id) applies. Providers still own what to send.
+ */
+export interface PostJsonSpec {
+  path: string;
+  /** Serialized as the JSON request body with content-type application/json. */
+  json: unknown;
+  query?: Record<string, QueryValue>;
+  operation: string;
+  timeoutMs?: number;
+}
+
 export interface HttpResult {
   status: number;
   json: unknown;
@@ -167,10 +185,44 @@ export class HttpClient {
    * Throws a normalized ConnectorError when the retry budget is exhausted.
    */
   async get(spec: GetSpec): Promise<HttpResult> {
+    return this.request({
+      path: spec.path,
+      query: spec.query,
+      operation: spec.operation,
+      timeoutMs: spec.timeoutMs,
+      init: { method: 'GET' },
+    });
+  }
+
+  /**
+   * Execute a POST with a JSON body through the identical pipeline (see `get`).
+   * Used by upstreams whose documented API takes its parameters in the body.
+   */
+  async postJson(spec: PostJsonSpec): Promise<HttpResult> {
+    return this.request({
+      path: spec.path,
+      query: spec.query,
+      operation: spec.operation,
+      timeoutMs: spec.timeoutMs,
+      init: {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(spec.json ?? {}),
+      },
+    });
+  }
+
+  private async request(spec: {
+    path: string;
+    query?: Record<string, QueryValue>;
+    operation: string;
+    timeoutMs?: number;
+    init: RequestInit;
+  }): Promise<HttpResult> {
     const correlationId = randomUUID();
     const startedAt = Date.now();
     const url = this.buildUrl(spec);
-    const logCtx = { operation: spec.operation, correlationId };
+    const logCtx = { operation: spec.operation, correlationId, method: spec.init.method ?? 'GET' };
     let attempt = 0;
     let refreshed = false;
 
@@ -189,8 +241,9 @@ export class HttpClient {
           }, spec.timeoutMs ?? this.timeoutMs);
           try {
             res = await this.fetchImpl(url, {
-              method: 'GET',
-              headers: { ...authHeaders, accept: 'application/json', 'x-correlation-id': correlationId },
+              ...spec.init,
+              method: spec.init.method ?? 'GET',
+              headers: { ...(spec.init.headers ?? {}), ...authHeaders, accept: 'application/json', 'x-correlation-id': correlationId },
               signal: controller.signal,
             });
           } finally {
@@ -341,7 +394,7 @@ export class HttpClient {
     }
   }
 
-  private buildUrl(spec: GetSpec): string {
+  private buildUrl(spec: { path: string; query?: Record<string, QueryValue> }): string {
     const url = new URL(`${this.baseUrl}${spec.path}`);
     for (const [key, value] of Object.entries(spec.query ?? {})) {
       if (value === undefined) continue;
