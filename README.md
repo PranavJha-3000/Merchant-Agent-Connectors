@@ -10,12 +10,35 @@ mode).
 
 ```
 AI Agent / MCP Host
-  -> MCP Server (stdio / Streamable HTTP)
+  -> MCP Server (stdio transport)
     -> Semantic tools (freshdesk_search_tickets, ...) - validated, schema'd
       -> Provider registry -> Provider adapter (routes, params, normalize, error map)
         -> Shared HTTP runtime (timeout, bounded retry, Retry-After, pacing, correlation IDs)
           -> External merchant APIs
 ```
+
+## Quick start (zero credentials, no network)
+
+```bash
+npm install
+npm test        # 249 pass, 1 skipped (the skip is the opt-in live smoke test)
+npm run demo    # deterministic 15-step walkthrough incl. failure paths
+```
+
+## How this satisfies the brief
+
+Each mandatory requirement, with the artifact that proves it:
+
+| Requirement | Where it is satisfied |
+|---|---|
+| Authentication | Freshdesk HTTP Basic (`API_KEY:X`), verified at `docs/providers/freshdesk.md`; OAuth 2.0 (Zoho, Unicommerce) and HTTPS Basic (WooCommerce) for the others. Keys live only in env vars |
+| List / get / search primitives | Four Freshdesk tools: `freshdesk_list_tickets`, `freshdesk_get_ticket`, `freshdesk_search_tickets`, `freshdesk_list_ticket_conversations` (`docs/tool-spec.md`) |
+| Rate-limit handling | `Retry-After` (seconds + HTTP-date) honored and bounded, exponential backoff with jitter, in-process pacing, `RATE_LIMITED` + `retryAfterMs` surfaced to the agent (`docs/reliability.md`) |
+| MCP tool specification | Semantic `provider_snake_case_operation` names, zod `inputSchema`/`outputSchema`, read-only annotations, `structuredContent` on success and `isError` on failure (`docs/tool-spec.md`) |
+| Agent capability / limitation documentation | What the agent can and cannot do, and every UNVERIFIED behavior (`docs/agent-capabilities.md`, `docs/limitations.md`) |
+| Setup and run instructions | This file: install, four commands, MCP host config, live mode (below) |
+| Working demonstration | `npm run demo` - 15 steps covering all four providers, including retries, 401/429 handling and a rejected Unicommerce request (`docs/demo.md`) |
+| Safe synthetic data | Fixtures use reserved domains (`example.test`, `example.com`) and fabricated values; no customer data, no credentials in the repo (`npm test -- test/security`) |
 
 ## Why this shape
 
@@ -33,8 +56,8 @@ AI Agent / MCP Host
 | Provider | Status | Auth | Read capabilities |
 |---|---|---|---|
 | **Freshdesk** | reference implementation | API key (HTTP Basic) | tickets: list, get, search, conversations |
-| **WooCommerce** | implemented (Phase 4) | REST API key (HTTPS Basic) | orders: list, get � products: list, get |
-| **Zoho Inventory** | implemented (Phase 5) | OAuth 2.0 (refresh token, in-memory) | items: list, get � sales orders: list, get |
+| **WooCommerce** | implemented (Phase 4) | REST API key (HTTPS Basic) | orders: list, get  - products: list, get |
+| **Zoho Inventory** | implemented (Phase 5) | OAuth 2.0 (refresh token, in-memory) | items: list, get  - sales orders: list, get |
 | **Unicommerce** | implemented (Phase 6) | OAuth 2.0 refresh grant (tenant host) | sale orders: search, get |
 
 Full matrix and verification status: [`docs/provider-matrix.md`](docs/provider-matrix.md).
@@ -42,7 +65,11 @@ Honest gaps: [`docs/limitations.md`](docs/limitations.md).
 
 ## Requirements
 
-- Node.js >= 20 (developed and tested on Node 24)
+- **Node.js >= 22.18** (LTS 22; verified on Node 24). The scripts run the
+  TypeScript sources directly (`node src/demo/runDemo.ts`) using Node's built-in
+  type stripping, which is **on by default from v22.18 / v23.6** - it does not
+  exist on Node 20, which is why the floor is 22.18 rather than 20.
+  Verified against https://nodejs.org/api/typescript.html (checked 2026-10-03).
 - No API keys, accounts, or network access required for tests or the demo
 
 ## Install and run

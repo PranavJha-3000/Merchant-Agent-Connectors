@@ -1,4 +1,4 @@
-﻿# Unicommerce
+# Unicommerce
 
 Status: **implemented (Phase 6)** - two read-only tools, fixtures, evals, demo,
 all tests green. This page replaces the earlier "designed, deliberately not

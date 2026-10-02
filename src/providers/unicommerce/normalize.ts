@@ -1,4 +1,4 @@
-﻿import type { EnumValue } from '../../capabilities/common.ts';
+import type { EnumValue } from '../../capabilities/common.ts';
 import type {
   SearchSaleOrdersParams,
   UnicommerceSaleOrderDetail,

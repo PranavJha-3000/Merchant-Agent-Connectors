@@ -10,7 +10,9 @@ client -> fixture upstream -> normalization -> agent payload). Only the upstream
 stubbed, and it is stubbed at the `fetch` boundary, so auth headers, retries,
 `Retry-After`, validation and error mapping all execute for real.
 
-Run time is about one second. Only `fetchedAt`/`ts` fields differ between runs.
+Run time is about one second. Runs are reproducible: the same 15 steps, same
+tools, same payloads. Only inherently per-run values differ between runs -
+`fetchedAt`/`ts` timestamps, `correlationId` UUIDs and `latencyMs`.
 
 ## Transcript outline
 
@@ -99,7 +101,7 @@ reorder level (`stockOnHand: 8` next to `reorderLevel: 20`), and
 `zoho_get_sales_order({ salesOrderId: '4815000000045208' })` returns line items
 and shipment progress (`shipmentDate: null`, `isBackorder: true`). Behind the
 scenes the connector exchanged its refresh token for an access token in memory
-and sent `Authorization: Zoho-oauthtoken �` - neither the token nor the
+and sent `Authorization: Zoho-oauthtoken ...` - neither the token nor the
 `organization_id` argument appears in any tool output.
 
 **STEP 12 - Zoho failure (404).** `zoho_get_item({ itemId: '4815000000099999' })`
@@ -123,7 +125,7 @@ will fulfil each line, and epoch-millisecond timestamps normalized to ISO-8601.
 request still returns **HTTP 200**, with `successful: false` and a documented
 error code in `errors[]`. The demo returns exactly that shape and the agent sees
 `VALIDATION_ERROR`, `retryable: false`, message
-"Unicommerce reported an application error � Invalid sale order code (code
+"Unicommerce reported an application error ... Invalid sale order code (code
 40005)" - never an empty result list that would read as "no orders found".
 
 ## Reviewer script

@@ -1,5 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { createMemoryLogger } from '../../src/core/logger.ts';
+import { buildConnectorTools } from '../../src/mcp/server.ts';
 
 /**
  * Documentation integrity: every relative link in the docs must resolve, and the
@@ -92,6 +94,23 @@ describe('documentation integrity', () => {
       expect(page, `${provider} doc must cite official sources`).toContain('https://');
       expect(page, `${provider} doc must mark unverified items`).toContain('UNVERIFIED');
       expect(page, `${provider} doc must state a check date`).toContain('2026-');
+    }
+  });
+
+  it('docs/tool-spec.md documents every tool the server actually registers', () => {
+    // The drift class this catches is real: a tool exists, its contract is
+    // undocumented, and the agent-facing spec silently loses it (AGENTS.md §17.6).
+    const bundles = buildConnectorTools({ mode: 'fixture', logger: createMemoryLogger(), env: {} });
+    const spec = readFileSync(new URL('docs/tool-spec.md', repoRoot), 'utf8');
+    const names = bundles.flatMap((b) => b.tools.map((t) => t.name));
+    expect(names.length).toBeGreaterThan(0);
+    for (const name of names) {
+      expect(spec, `docs/tool-spec.md must document ${name}`).toContain(`## ${name}`);
+    }
+    // ...and the spec must not advertise tools that no longer exist.
+    for (const documented of spec.match(/^## (\w+)$/gm) ?? []) {
+      const toolName = documented.replace(/^## /, '').trim();
+      expect(names, `docs/tool-spec.md documents unknown tool ${toolName}`).toContain(toolName);
     }
   });
 

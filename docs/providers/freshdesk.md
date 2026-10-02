@@ -80,8 +80,8 @@ docs advise honoring `retry-after` and queuing calls client-side.
 Because the applicable number is account-specific, the connector does not hardcode
 a budget. It paces requests, honors `Retry-After`, bounds the wait, and reports
 `RATE_LIMITED` with `retryAfterMs` when the bound is exceeded. Freshdesk's own
-recommendation (queue calls, avoid deep pagination) is reflected in the pacing and
-by not encouraging page numbers above 500.
+recommendation (queue calls client-side rather than bursting) is reflected in the
+100 ms in-process pacing.
 
 ## UNVERIFIED / deliberate gaps
 
@@ -90,7 +90,7 @@ by not encouraging page numbers above 500.
 | Which rate-limit bucket applies to a given account | Freshdesk states limits are plan-dependent and per-endpoint; the applicable number is not knowable from the docs alone | No hardcoded budget - pace, honor `Retry-After`, bound the wait, and surface `retryAfterMs` |
 | Exact numeric `code` values on error bodies | Status codes and the error *shape* are verified; individual machine codes are not enumerated | Mapping keys off HTTP status; the body message is borrowed for detail only |
 | Custom ticket statuses | Docs confirm merchants can define their own statuses | Unknown codes normalize to `{ code, label: 'unknown' }` instead of failing |
-| Whether `search/tickets` paginates beyond the first page | The endpoint documents `query` only; no paging parameters were verified | The tool pages the ticket list and searches the first page only, and says so in its description |
+| Whether `search/tickets` paginates beyond the first page | Verified: the endpoint accepts `page` (max 10) with a fixed 30 per page, and returns `total` | The tool exposes `page` (1-10) and reports `total`; `hasMore` stops at page 10 because the API will not serve more |
 | Conversation endpoint paging | `page`/`per_page` accepted, defaults not stated | Tool applies the same 1-based paging contract and never claims a total |
 
 ## Implementation map

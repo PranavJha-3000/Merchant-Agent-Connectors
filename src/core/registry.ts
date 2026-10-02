@@ -9,7 +9,8 @@ import type { ToolDefinition } from './tools.ts';
  * self-contained module exporting a ProviderModule; the only shared file that
  * knows about concrete providers is src/providers/index.ts (the registration
  * list). Adding a provider = new folder under src/providers/ + one line there.
- * Enforced by test/unit/registry.test.ts + eslint boundaries (AGENTS.md §18).
+ * Enforced by test/unit/registry.test.ts + test/unit/boundaries.test.ts
+ * (AGENTS.md §5, §18).
  */
 
 export type ConnectorMode = 'fixture' | 'live';

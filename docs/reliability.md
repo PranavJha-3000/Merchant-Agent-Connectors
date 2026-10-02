@@ -53,8 +53,17 @@ the second ~500 ms (plus jitter).
 
 Reactive 429 handling alone is not enough, so the client also does:
 
-- **Pacing** - a minimum interval between request *starts* (100 ms in live mode,
-  0 in fixture mode). Prevents bursting a page loop.
+- **Pacing** - a minimum interval between request *starts*, in-process. Fixture
+  mode is always 0 (deterministic). Live mode is per provider, because the
+  documented limits differ:
+
+  | Provider | Live pacing | Basis |
+  |---|---|---|
+  | Freshdesk | 100 ms | plan-based, account-specific limits (docs); deliberately gentle |
+  | WooCommerce | 100 ms | account-based, plan-dependent (docs); deliberately gentle |
+  | Zoho Inventory | 700 ms | VERIFIED 100 requests/minute/organization → ~600 ms floor, rounded up |
+  | Unicommerce | 1000 ms | UNVERIFIED - no published limit found, so the connector is deliberately slow |
+
 - **Concurrency limit** - at most 4 in-flight requests per client by default.
 
 Both are intentionally in-process only. A distributed limiter would require Redis

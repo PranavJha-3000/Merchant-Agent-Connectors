@@ -1,4 +1,4 @@
-﻿import { z } from 'zod';
+import { z } from 'zod';
 import type { ToolDefinition } from '../../core/tools.ts';
 import {
   conversationMessageSchema,

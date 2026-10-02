@@ -8,3 +8,6 @@ coverage/
 !.env.example
 
 *.log
+
+# Local editor/agent tooling (never part of the submission)
+.kilo/
