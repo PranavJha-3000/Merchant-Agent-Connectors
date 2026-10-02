@@ -1,0 +1,75 @@
+[
+  {
+    "id": 42,
+    "number": "42",
+    "status": "processing",
+    "currency": "USD",
+    "total": "48.00",
+    "customer_id": 7,
+    "date_created": "2026-09-28T10:15:00",
+    "date_created_gmt": "2026-09-28T15:15:00",
+    "date_modified": "2026-09-29T09:00:00",
+    "date_modified_gmt": "2026-09-29T14:00:00",
+    "date_paid": "2026-09-28T10:20:00",
+    "date_paid_gmt": "2026-09-28T15:20:00",
+    "billing": {
+      "first_name": "Nora",
+      "last_name": "Fisher",
+      "email": "nora.fisher@example.test",
+      "city": "Springfield",
+      "country": "US"
+    },
+    "line_items": [
+      { "id": 301, "name": "Aqua Trail Bottle", "product_id": 17, "variation_id": 0, "quantity": 2, "subtotal": "48.00", "total": "48.00" }
+    ]
+  },
+  {
+    "id": 43,
+    "number": "43",
+    "status": "completed",
+    "currency": "USD",
+    "total": "107.50",
+    "customer_id": 7,
+    "date_created": "2026-09-25T12:00:00",
+    "date_created_gmt": "2026-09-25T17:00:00",
+    "date_modified": "2026-09-26T08:30:00",
+    "date_modified_gmt": "2026-09-26T13:30:00",
+    "date_paid": "2026-09-25T12:05:00",
+    "date_paid_gmt": "2026-09-25T17:05:00",
+    "date_completed": "2026-09-27T16:00:00",
+    "date_completed_gmt": "2026-09-27T21:00:00",
+    "billing": {
+      "first_name": "Nora",
+      "last_name": "Fisher",
+      "email": "nora.fisher@example.test",
+      "city": "Springfield",
+      "country": "US"
+    },
+    "line_items": [
+      { "id": 302, "name": "Granite Hiker Boot", "product_id": 19, "variation_id": 0, "quantity": 1, "subtotal": "89.00", "total": "89.00" },
+      { "id": 303, "name": "Crimson Peak Tee", "product_id": 18, "variation_id": 0, "quantity": 1, "subtotal": "18.50", "total": "18.50" }
+    ]
+  },
+  {
+    "id": 44,
+    "number": "44",
+    "status": "pending",
+    "currency": "USD",
+    "total": "18.50",
+    "customer_id": 0,
+    "date_created": "2026-09-20T18:45:00",
+    "date_created_gmt": "2026-09-20T23:45:00",
+    "date_modified": "2026-09-20T18:45:00",
+    "date_modified_gmt": "2026-09-20T23:45:00",
+    "billing": {
+      "first_name": "Owen",
+      "last_name": "Blake",
+      "email": "owen.blake@example.test",
+      "city": "Riverton",
+      "country": "US"
+    },
+    "line_items": [
+      { "id": 304, "name": "Crimson Peak Tee", "product_id": 18, "variation_id": 0, "quantity": 1, "subtotal": "18.50", "total": "18.50" }
+    ]
+  }
+]

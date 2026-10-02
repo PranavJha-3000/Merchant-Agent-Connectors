@@ -7,7 +7,7 @@ Legend for verification: **VERIFIED** = confirmed against official documentation
 | Provider | Status | Auth mechanism | Read capabilities (V1) | Writes | Notes |
 |---|---|---|---|---|---|
 | `freshdesk` | ✅ reference implementation | API key via HTTP Basic — **VERIFIED** | `tickets.list` `tickets.get` `tickets.search` `tickets.conversations` — **VERIFIED** | ❌ out of scope (read-only V1) | Full vertical slice: tools, fixtures, evals, demo |
-| `woocommerce` | ⚠️ designed, not yet implemented | REST API key over HTTPS Basic — **VERIFIED** (docs) | orders, products (planned) | ❌ | Phase 4 — starts only after Freshdesk quality gate |
+| `woocommerce` | ✅ implemented (Phase 4) | REST API key over HTTPS Basic — **VERIFIED** (docs) | `orders.list` `orders.get` `products.list` `products.get` — **VERIFIED** (endpoints + parameters) | ❌ | Same reliability pipeline as Freshdesk; `per_page` cap is connector-imposed (Woo documents no max); rate limits not documented upstream — generic 429 handling applies |
 | `zoho-inventory` | ⚠️ designed, not yet implemented | OAuth 2.0 authorization-code + refresh — **VERIFIED** (docs) | items, sales orders (planned) | ❌ | Phase 5 — per-data-center endpoints required |
 | `unicommerce` | ⚠️ designed, not yet implemented | OAuth password-grant token (official docs) — **PARTIAL** | sale orders (planned) | ❌ | Phase 6 — API paths pending verification; will not ship unverified endpoints |
 

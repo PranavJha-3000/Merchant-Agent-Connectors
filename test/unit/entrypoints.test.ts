@@ -38,7 +38,7 @@ describe('entrypoint output portability', () => {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     });
-    for (let step = 1; step <= 8; step += 1) {
+    for (let step = 1; step <= 10; step += 1) {
       expect(output, `demo stopped before STEP ${step}`).toContain(`STEP ${step} |`);
     }
     expect(output).toContain('DEMO COMPLETE');
@@ -51,5 +51,9 @@ describe('entrypoint output portability', () => {
     expect(output).toContain('"retryAfterMs": 3600000');
     expect(output).toContain('"code": "AUTHENTICATION_ERROR"');
     expect(output).toContain('"code": "NOT_FOUND"');
+    // The second provider must be exercised through the exact same pipeline.
+    expect(output).toContain('STEP 9 |');
+    expect(output).toContain('"provider": "woocommerce"');
+    expect(output).toContain('"code": "processing"');
   });
 });

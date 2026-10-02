@@ -4,24 +4,38 @@ import { createMemoryLogger, type MemoryLogger } from '../src/core/logger.ts';
 import type { ToolDefinition } from '../src/core/tools.ts';
 import { buildConnectorTools } from '../src/mcp/server.ts';
 import { freshdeskModule } from '../src/providers/freshdesk/manifest.ts';
+import { woocommerceModule } from '../src/providers/woocommerce/manifest.ts';
 
-/** Build Freshdesk tools against fixtures (default) or an injected fetch, with a memory logger. */
-export function freshdeskTools(options: { fetchImpl?: FetchLike } = {}): {
+interface BuiltTools {
   tools: ToolDefinition[];
   byName: Map<string, ToolDefinition>;
   logger: MemoryLogger;
-} {
+}
+
+function buildModuleTools(
+  module: (typeof freshdeskModule | typeof woocommerceModule),
+  options: { fetchImpl?: FetchLike },
+): BuiltTools {
   const logger = createMemoryLogger();
-  const opts = {
-    modules: [freshdeskModule],
+  const bundles = buildConnectorTools({
+    modules: [module],
     mode: 'fixture' as const,
     logger,
     env: {},
     ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
-  };
-  const bundles = buildConnectorTools(opts);
+  });
   const tools = bundles[0]!.tools;
   return { tools, byName: new Map(tools.map((t) => [t.name, t])), logger };
+}
+
+/** Build Freshdesk tools against fixtures (default) or an injected fetch, with a memory logger. */
+export function freshdeskTools(options: { fetchImpl?: FetchLike } = {}): BuiltTools {
+  return buildModuleTools(freshdeskModule, options);
+}
+
+/** Build WooCommerce tools against fixtures (default) or an injected fetch, with a memory logger. */
+export function woocommerceTools(options: { fetchImpl?: FetchLike } = {}): BuiltTools {
+  return buildModuleTools(woocommerceModule, options);
 }
 
 interface JsonRpcResponse {

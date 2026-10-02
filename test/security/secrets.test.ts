@@ -5,7 +5,8 @@ import type { FetchLike } from '../../src/core/http.ts';
 import { executeToolDefinition } from '../../src/core/tools.ts';
 import { createFixtureFetch } from '../../src/fixtures/transport.ts';
 import { freshdeskFixtureRoutes } from '../../src/providers/freshdesk/routes.ts';
-import { freshdeskTools } from '../helpers.ts';
+import { woocommerceFixtureRoutes } from '../../src/providers/woocommerce/routes.ts';
+import { freshdeskTools, woocommerceTools } from '../helpers.ts';
 
 /**
  * Security tests: prove (not just promise) that credentials and real customer
@@ -14,6 +15,9 @@ import { freshdeskTools } from '../helpers.ts';
 
 const FIXTURE_SECRET = 'fd_fixture_key_not_a_real_secret';
 const FIXTURE_SECRET_B64 = basicAuthHeader(FIXTURE_SECRET, 'X');
+const WOO_FIXTURE_KEY = 'ck_fixture_not_a_real_key';
+const WOO_FIXTURE_SECRET = 'cs_fixture_not_a_real_secret';
+const WOO_FIXTURE_SECRET_B64 = basicAuthHeader(WOO_FIXTURE_KEY, WOO_FIXTURE_SECRET).replace('Basic ', '');
 
 function assertNoSecrets(serialized: string): void {
   expect(serialized).not.toContain(FIXTURE_SECRET);
@@ -54,6 +58,68 @@ describe('secrets never reach logs', () => {
   });
 });
 
+describe('WooCommerce secrets never reach logs', () => {
+  function assertNoWooSecrets(serialized: string): void {
+    expect(serialized).not.toContain(WOO_FIXTURE_KEY);
+    expect(serialized).not.toContain(WOO_FIXTURE_SECRET);
+    expect(serialized).not.toContain(WOO_FIXTURE_SECRET_B64);
+  }
+
+  it('covers success, retry, and failure flows', async () => {
+    const scenarios: FetchLike[] = [
+      async () => new Response(JSON.stringify([{ id: 42, status: 'processing' }]), { status: 200 }),
+      async () =>
+        new Response(JSON.stringify({ code: 'woocommerce_rest_invalid_consumer_key', message: 'Consumer key is missing.', data: { status: 401 } }), {
+          status: 401,
+        }),
+      async () =>
+        new Response(JSON.stringify({ code: 'rate_limit', message: 'Too many requests.', data: { status: 429 } }), {
+          status: 429,
+          headers: { 'retry-after': '0' },
+        }),
+      async () => new Response('<html>not json</html>', { status: 200 }),
+    ];
+
+    for (const fetchImpl of scenarios) {
+      const { byName, logger } = woocommerceTools({ fetchImpl });
+      await executeToolDefinition(byName.get('woocommerce_list_orders')!, {});
+      await executeToolDefinition(byName.get('woocommerce_get_order')!, { orderId: 42 });
+      const serialized = JSON.stringify(logger.entries);
+      assertNoWooSecrets(serialized);
+      expect(serialized).not.toContain('Basic ');
+      expect(serialized).not.toContain('"authorization"');
+    }
+  });
+
+  it('tool error payloads never contain credentials', async () => {
+    const fetchImpl: FetchLike = async () =>
+      new Response(JSON.stringify({ code: 'woocommerce_rest_invalid_consumer_key', message: 'bad key', data: { status: 401 } }), { status: 401 });
+    const { byName } = woocommerceTools({ fetchImpl });
+    const result = await executeToolDefinition(byName.get('woocommerce_list_orders')!, {});
+    expect(result.isError).toBe(true);
+    assertNoWooSecrets(JSON.stringify(result));
+  });
+
+  it('fixture fetch requests only carry the auth header (no credentials in URLs)', async () => {
+    // WooCommerce also documents query-string credentials as a fallback; the
+    // connector deliberately never uses them, so no key can end up in a URL.
+    const urls: string[] = [];
+    const inner = createFixtureFetch({
+      routes: woocommerceFixtureRoutes(),
+      onRequest: (u) => urls.push(u.toString()),
+    });
+    const { byName } = woocommerceTools({ fetchImpl: inner });
+    await executeToolDefinition(byName.get('woocommerce_list_orders')!, {});
+    await executeToolDefinition(byName.get('woocommerce_get_order')!, { orderId: 42 });
+    for (const url of urls) {
+      expect(url).not.toContain('consumer_key');
+      expect(url).not.toContain('consumer_secret');
+      expect(url).not.toContain(WOO_FIXTURE_KEY);
+      expect(url).not.toContain(WOO_FIXTURE_SECRET);
+    }
+  });
+});
+
 describe('fixtures are synthetic', () => {
   it('contains no real-looking customer PII or credential material', () => {
     const fixtureFiles = [
@@ -61,6 +127,10 @@ describe('fixtures are synthetic', () => {
       '../../src/fixtures/freshdesk/ticket.101.json',
       '../../src/fixtures/freshdesk/search.json',
       '../../src/fixtures/freshdesk/conversations.101.json',
+      '../../src/fixtures/woocommerce/orders.list.json',
+      '../../src/fixtures/woocommerce/order.42.json',
+      '../../src/fixtures/woocommerce/products.list.json',
+      '../../src/fixtures/woocommerce/product.17.json',
     ];
     for (const rel of fixtureFiles) {
       const content = readFileSync(new URL(rel, import.meta.url), 'utf8');
@@ -87,7 +157,9 @@ describe('repository hygiene', () => {
   it('.env.example exists and contains no real-looking values', () => {
     const example = readFileSync(new URL('../../.env.example', import.meta.url), 'utf8');
     expect(example).toContain('FRESHDESK_API_KEY');
+    expect(example).toContain('WOOCOMMERCE_CONSUMER_SECRET');
     expect(example).not.toContain(FIXTURE_SECRET);
+    expect(example).not.toContain(WOO_FIXTURE_SECRET);
     expect(example).not.toMatch(/eyJ[A-Za-z0-9_-]{20,}/);
   });
 });

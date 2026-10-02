@@ -36,6 +36,25 @@ contracts an agent depends on when it decides whether to retry, report, or move 
 Task 11 additionally asserts a request counter did not move, encoding
 "validation happens before the network" as a testable property.
 
+## Tasks (WooCommerce, all deterministic)
+
+| # | Task id | Scenario | Tool | Expected outcome |
+|---|---|---|---|---|
+| 1 | `browse-recent-orders` | See recent orders to triage fulfilment work | `woocommerce_list_orders` | success, >= 1 item |
+| 2 | `find-unfulfilled-orders` | List orders awaiting fulfilment | `woocommerce_list_orders` (`status: 'processing'`) | success, 1 item |
+| 3 | `retrieve-known-order` | Line items and payment dates for id 42 | `woocommerce_get_order` | success |
+| 4 | `find-customer-orders-by-id` | Customer's orders by numeric customer id | `woocommerce_list_orders` (`customerId`) | success, 2 items |
+| 5 | `find-product-by-sku` | Warehouse asks about a SKU | `woocommerce_list_products` (`sku`) | success, 1 item |
+| 6 | `check-stock-levels` | Which products are out of stock | `woocommerce_list_products` (`stockStatus`) | success, 1 item |
+| 7 | `empty-filter-is-not-an-error` | No refunded orders exist | `woocommerce_list_orders` (`status: 'refunded'`) | success with `items: []` |
+| 8 | `unknown-order-id-is-not-found` | Order id does not exist | `woocommerce_get_order` | `NOT_FOUND`, `retryable: false` |
+| 9 | `stop-after-auth-failure` | Store rejects the API key | `woocommerce_list_orders` | `AUTHENTICATION_ERROR`, `retryable: false` |
+| 10 | `reject-invalid-arguments-pre-network` | `productId: 0` | `woocommerce_get_product` | `VALIDATION_ERROR`, and **no upstream call** |
+
+Both suites live in `test/eval/` and assert tool selection, argument shapes,
+result classes, empty-vs-missing discrimination, and retryable signalling -
+the deterministic contract an LLM depends on.
+
 ## Why there is no LLM in the loop
 
 Evaluations test the *contract an agent relies on* - tool existence and naming,

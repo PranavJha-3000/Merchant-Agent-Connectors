@@ -1,0 +1,66 @@
+{
+  "id": 42,
+  "number": "42",
+  "status": "processing",
+  "currency": "USD",
+  "total": "48.00",
+  "customer_id": 7,
+  "date_created": "2026-09-28T10:15:00",
+  "date_created_gmt": "2026-09-28T15:15:00",
+  "date_modified": "2026-09-29T09:00:00",
+  "date_modified_gmt": "2026-09-29T14:00:00",
+  "date_paid": "2026-09-28T10:20:00",
+  "date_paid_gmt": "2026-09-28T15:20:00",
+  "date_completed": null,
+  "date_completed_gmt": null,
+  "payment_method": "bacs",
+  "payment_method_title": "Direct bank transfer",
+  "transaction_id": "fixture-txn-0042",
+  "customer_note": "Please leave the parcel at the side door.",
+  "billing": {
+    "first_name": "Nora",
+    "last_name": "Fisher",
+    "company": "Fixture Goods Co",
+    "address_1": "42 Fixture Lane",
+    "address_2": "",
+    "city": "Springfield",
+    "state": "IL",
+    "postcode": "62701",
+    "country": "US",
+    "email": "nora.fisher@example.test",
+    "phone": "+1-555-0100"
+  },
+  "shipping": {
+    "first_name": "Nora",
+    "last_name": "Fisher",
+    "company": "",
+    "address_1": "42 Fixture Lane",
+    "address_2": "",
+    "city": "Springfield",
+    "state": "IL",
+    "postcode": "62701",
+    "country": "US"
+  },
+  "line_items": [
+    {
+      "id": 301,
+      "name": "Aqua Trail Bottle",
+      "product_id": 17,
+      "variation_id": 0,
+      "quantity": 2,
+      "tax_class": "",
+      "subtotal": "48.00",
+      "subtotal_tax": "0.00",
+      "total": "48.00",
+      "total_tax": "0.00"
+    }
+  ],
+  "shipping_lines": [
+    { "id": 901, "method_id": "flat_rate", "method_title": "Flat Rate", "total": "0.00" }
+  ],
+  "meta_data": [],
+  "_links": {
+    "self": [{ "href": "https://store.fixture.example/wp-json/wc/v3/orders/42" }],
+    "collection": [{ "href": "https://store.fixture.example/wp-json/wc/v3/orders" }]
+  }
+}

@@ -6,7 +6,7 @@ npm test -- test/security    # security assertions only
 npm run build                # typecheck (tsc)
 ```
 
-Current status: **113 passing, 1 skipped** (the skipped one is the opt-in live
+Current status: **167 passing, 1 skipped** (the skipped one is the opt-in live
 test). Every test runs without network access or credentials.
 
 ## Categories
@@ -32,9 +32,10 @@ test). Every test runs without network access or credentials.
 
 ### MCP - `test/mcp/server.test.ts`
 
-Real SDK over `InMemoryTransport`: `tools/list` returns exactly the four tools
-with descriptions and read-only annotations; a successful call returns
-SDK-validated `structuredContent`; a failure returns `isError: true` with no
+Real SDK over `InMemoryTransport`: `tools/list` returns exactly the eight shipped
+tools (4 Freshdesk + 4 WooCommerce) with descriptions and read-only annotations;
+a successful call returns SDK-validated `structuredContent`; a failure returns
+`isError: true` with no
 `structuredContent`; invalid arguments are rejected as an error result.
 
 ### Security - `test/security/secrets.test.ts`

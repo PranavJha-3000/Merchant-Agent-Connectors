@@ -154,6 +154,136 @@ thread resource; it is deliberately not generalized).
 
 ---
 
+## woocommerce_list_orders
+
+**Purpose** - list a store's orders with pagination and optional filters
+(status, customer, product, date range, free-form search).
+
+**Use when** - browsing recent orders; finding a customer's orders by numeric
+customer id; filtering unfulfilled work (status); locating an order id first.
+
+**Do NOT use when** - you already have an order id (`woocommerce_get_order`).
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `page` | integer >= 1 | no (default 1) | 1-based |
+| `perPage` | integer 1..100 | no (default 10) | WooCommerce default is 10; 100 is a **connector cap**, not a documented WooCommerce maximum |
+| `status` | enum | no | `pending`, `processing`, `on-hold`, `completed`, `cancelled`, `refunded`, `failed`, `trash` - ONE value per call; omit for all |
+| `search` | string 1..200 | no | Free-form; match behavior is store-defined - not an exact email lookup |
+| `customerId` | integer >= 0 | no | WordPress user id; `0` = guest orders. No documented email filter exists |
+| `productId` | integer >= 1 | no | Orders containing this product |
+| `after` / `before` | ISO-8601 datetime | no | Published-date bounds (docs: "ISO8601 compliant date") |
+
+**Output** - `{ provider, fetchedAt, page, perPage, hasMore, total, items[] }`
+where `total` comes from the `X-WP-Total` header (null when a proxy strips it)
+and `hasMore` from `X-WP-TotalPages` (Link `rel="next"` as fallback). Items are
+`OrderSummary`: `{ provider, id, number, status{code,label}, currency, total,
+customerId, createdAt, updatedAt }`; `total` stays a string decimal.
+
+**Failure semantics** - 401 `AUTHENTICATION_ERROR`; 403 `AUTHORIZATION_ERROR`;
+400/422 `VALIDATION_ERROR` with the upstream envelope message; 429
+`RATE_LIMITED` (retryable, honors `Retry-After`); 5xx `UPSTREAM_UNAVAILABLE`
+(retried internally first). Empty match = success with `items: []`.
+
+**Security** - read-only; data scope equals the API key's WordPress role.
+
+**Kind** - provider-specific tool wrapping the shared `OrderListable`
+capability (semantics align with future sales-order providers).
+
+---
+
+## woocommerce_get_order
+
+**Purpose** - fetch exactly one order by numeric id with line items, totals,
+payment dates, customer note, and billing/shipping identifiers.
+
+**Use when** - you already have an order id (from a list result or the user).
+
+**Do NOT use when** - you only have a customer email/name/status - locate the
+id with `woocommerce_list_orders` first.
+
+**Input** - `orderId` (integer >= 1, required).
+
+**Output** - `{ provider, fetchedAt, order }` where `order` is `OrderDetail`:
+summary fields plus `datePaid, dateCompleted, paymentMethodTitle,
+customerNote, billingName, billingEmail, shippingCity, shippingCountry,
+lineItems[], itemCount`.
+
+**Failure semantics** - unknown id -> `NOT_FOUND`, `retryable: false`.
+
+**Security** - contains customer PII (name/email/address fragments) because
+support workflows need it; the description instructs the agent to keep it
+within the merchant context. Fixtures are synthetic.
+
+**Kind** - provider-specific tool wrapping the shared `OrderReadable`
+capability.
+
+---
+
+## woocommerce_list_products
+
+**Purpose** - list store products with pagination and filters (search, exact
+SKU, status, stock state).
+
+**Use when** - finding a product by SKU or name; checking catalog status or
+stock levels; locating a product id first.
+
+**Do NOT use when** - you already have a product id
+(`woocommerce_get_product`), or you need orders (`woocommerce_list_orders`).
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `page` | integer >= 1 | no (default 1) | 1-based |
+| `perPage` | integer 1..100 | no (default 10) | Same connector cap as orders |
+| `search` | string 1..200 | no | Free-form, store-defined match behavior |
+| `sku` | string 1..100 | no | Exact SKU match (verified: "Limit result set to products with a specific SKU") |
+| `status` | enum | no | `any`, `draft`, `pending`, `private`, `publish` (omit = documented default `any`) |
+| `stockStatus` | enum | no | `instock`, `outofstock`, `onbackorder` |
+
+**Output** - page envelope with `ProductSummary` items:
+`{ provider, id, name, slug, sku, type, status, price, regularPrice,
+salePrice, onSale, stockStatus, stockQuantity, manageStock, totalSales,
+featured, createdAt, updatedAt }`.
+
+**Failure semantics** - same matrix as orders; empty filter match is a success.
+
+**Security** - read-only catalog data; no customer records in this resource.
+
+**Kind** - provider-specific tool wrapping the shared `ProductListable`
+capability.
+
+---
+
+## woocommerce_get_product
+
+**Purpose** - fetch exactly one product by numeric id with price, stock state,
+description, categories, tags, and permalink.
+
+**Use when** - you already have a product id.
+
+**Do NOT use when** - you only have a SKU or name - use
+`woocommerce_list_products` (exact `sku` filter) first.
+
+**Input** - `productId` (integer >= 1, required).
+
+**Output** - `{ provider, fetchedAt, product }` where `product` is
+`ProductDetail`: summary plus `permalink, shortDescription, description,
+catalogVisibility, categories[], tags[], imageCount`.
+
+**Failure semantics** - unknown id -> `NOT_FOUND`, `retryable: false`.
+
+**Security** - read-only. Stock values are point-in-time; the description tells
+the agent to re-fetch before acting on them.
+
+**Kind** - provider-specific tool wrapping the shared `ProductReadable`
+capability.
+
+---
+
 ## Planned tools (not implemented)
 
 Design intent only; each requires verification before implementation. See
@@ -161,7 +291,6 @@ Design intent only; each requires verification before implementation. See
 
 | Provider | Planned tools | Source to verify |
 |---|---|---|
-| WooCommerce | `woocommerce_list_orders`, `woocommerce_get_order`, `woocommerce_list_products`, `woocommerce_get_product` | https://developer.woocommerce.com/docs/apis/rest-api/v3/ |
 | Zoho Inventory | `zoho_list_items`, `zoho_get_item`, `zoho_list_sales_orders`, `zoho_get_sales_order` | https://www.zoho.com/inventory/api/v1/ |
 | Unicommerce | `unicommerce_search_sale_orders`, `unicommerce_get_sale_order` | https://documentation.unicommerce.com/ |
 

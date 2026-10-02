@@ -3,14 +3,16 @@
 This file is the honest counterweight to the rest of the documentation. Anything
 unverified is labelled UNVERIFIED and is deliberately **not** implemented.
 
-## 1. Only one provider is implemented
+## 1. Two providers are implemented; two are not
 
-Freshdesk is complete. WooCommerce, Zoho Inventory and Unicommerce are **designed
-but not implemented**. Adding a provider is a deliberate, gated step
-(`docs/adding-a-provider.md`), not a matter of dropping in a URL.
+Freshdesk (reference) and WooCommerce (Phase 4) are complete. Zoho Inventory and
+Unicommerce are **designed but not implemented**. Adding a provider is a
+deliberate, gated step (`docs/adding-a-provider.md`), not a matter of dropping
+in a URL.
 
-Rationale: one reference-quality vertical slice is more valuable than four shallow
-connectors. See `docs/provider-matrix.md` for status.
+Rationale: one reference-quality vertical slice is more valuable than four
+shallow connectors; expansion proceeds only while quality holds. See
+`docs/provider-matrix.md` for status.
 
 ## 2. Read-only
 
@@ -31,13 +33,32 @@ official documentation during this work:
 | `company_id` / `unique_external_id` list filters | Present in the adapter's internal parameter support but not exposed as tool inputs | Add after verifying field semantics |
 | Attachment download URLs | Not needed for read-only ticket triage | Out of scope |
 
-## 4. Deliberate non-goals
+## 4. WooCommerce behaviors that remain UNVERIFIED
+
+Full table with consequences: `docs/providers/woocommerce.md`. Summary:
+
+- **`per_page` maximum** - not documented upstream; the tool's 100 cap is a
+  connector-imposed safety bound, explicitly not a claimed WooCommerce limit.
+- **Rate limits** - the checked WooCommerce docs contain no rate-limit or 429
+  text; the shared 429/`Retry-After` pipeline still applies generically, but no
+  quota is claimed.
+- **`search` match semantics** - documented only as "Limit results to those
+  matching a string"; the agent-facing description says behavior is
+  store-defined instead of promising email/id matching.
+- **Multi-value `status` filters** - one value per call; comma-separated
+  arrays were not verified for the orders list and are not sent.
+- **OAuth 1.0a / plain-HTTP stores** - documented upstream, deliberately not
+  implemented; `http://` origins fail configuration validation.
+- **Query-string credentials** - documented upstream as a server fallback,
+  deliberately never used (keeps keys out of URLs).
+
+## 5. Deliberate non-goals
 
 Per AGENTS.md §3: no frontend, database, user accounts, billing, Kubernetes,
 microservices, cloud deployment, webhooks, background jobs, distributed queues,
 dashboards, model hosting, or complex caching.
 
-## 5. Accepted trade-offs
+## 6. Accepted trade-offs
 
 | Trade-off | Why accepted |
 |---|---|
@@ -48,7 +69,7 @@ dashboards, model hosting, or complex caching.
 | Only stdio transport is wired | Streamable HTTP is designed for (`createConnectorServer` is transport-agnostic) but no host requires it yet. |
 | Unicommerce API paths | Token endpoint verified from official docs; sale-order search/get paths are **UNVERIFIED**, so no code was written. See `docs/providers/unicommerce.md`. |
 
-## 6. What a reviewer should not assume
+## 7. What a reviewer should not assume
 
 - The connector does not retry non-idempotent or semantic failures, and never
   writes merchant state.

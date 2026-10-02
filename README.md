@@ -1,8 +1,9 @@
 ﻿# Merchant Agent Connectors
 
 An MCP connector platform that gives AI agents secure, semantic access to merchant
-systems. **Freshdesk is the reference implementation**; WooCommerce, Zoho Inventory,
-and Unicommerce plug into the same architecture without touching existing code.
+systems. **Freshdesk is the reference implementation** and **WooCommerce is a
+second provider plugged into the same architecture**; Zoho Inventory and
+Unicommerce follow the identical extension seam without touching existing code.
 
 The whole test suite and demo run with **zero credentials** (deterministic fixture
 mode).
@@ -32,7 +33,7 @@ AI Agent / MCP Host
 | Provider | Status | Auth | Read capabilities |
 |---|---|---|---|
 | **Freshdesk** | reference implementation | API key (HTTP Basic) | tickets: list, get, search, conversations |
-| WooCommerce | designed, not implemented | REST API key (HTTPS) | orders, products (planned) |
+| **WooCommerce** | implemented (Phase 4) | REST API key (HTTPS Basic) | orders: list, get · products: list, get |
 | Zoho Inventory | designed, not implemented | OAuth 2.0 (auth code + refresh) | items, sales orders (planned) |
 | Unicommerce | designed, not implemented | OAuth token (docs verified in part) | sale orders (planned) |
 
@@ -49,7 +50,7 @@ Honest gaps: [`docs/limitations.md`](docs/limitations.md).
 ```bash
 npm install
 
-npm test                 # 113 tests, no credentials, no network
+npm test                 # full suite, no credentials, no network (1 skipped: live smoke)
 npm run demo             # deterministic end-to-end demo incl. failure paths
 npm run inspect:tools    # print the exact MCP tool surface
 npm run build            # typecheck (tsc)
@@ -83,8 +84,15 @@ Copy `.env.example` to `.env` (git-ignored) and set:
 
 ```
 CONNECTOR_MODE=live
+
+# Freshdesk
 FRESHDESK_DOMAIN=your-subdomain      # "acme" for acme.freshdesk.com
 FRESHDESK_API_KEY=your-api-key       # create via Freshdesk Profile > API Key
+
+# WooCommerce (HTTPS store only; use a READ-ONLY key)
+WOOCOMMERCE_BASE_URL=https://shop.example.com
+WOOCOMMERCE_CONSUMER_KEY=ck_your_key
+WOOCOMMERCE_CONSUMER_SECRET=cs_your_secret
 ```
 
 ```bash
@@ -94,9 +102,9 @@ CONNECTOR_MODE=live npm run serve:stdio
 FRESHDESK_DOMAIN=... FRESHDESK_API_KEY=... npx vitest run test/integration
 ```
 
-Live mode uses read-only Freshdesk endpoints only. Missing configuration fails fast
-with a `ConfigurationError` before any network call, and credentials are never
-logged.
+Live mode uses read-only endpoints only (Freshdesk tickets; WooCommerce orders
+and products). Missing configuration fails fast with a `ConfigurationError`
+before any network call, and credentials are never logged.
 
 ## What the agent can do today
 
@@ -107,6 +115,10 @@ logged.
 | Browse the recent queue | `freshdesk_list_tickets` |
 | Read one ticket in full | `freshdesk_get_ticket` |
 | Read the reply/note thread | `freshdesk_list_ticket_conversations` |
+| List unfulfilled / recent / filtered orders | `woocommerce_list_orders` (`status`, `after`, `customerId`, ...) |
+| Read one order (line items, payment, customer note) | `woocommerce_get_order` |
+| Find a product by exact SKU or name | `woocommerce_list_products` (`sku` / `search`) |
+| Check price and stock state of a product | `woocommerce_get_product` |
 
 It cannot write anything, and it is told (in tool descriptions) to never quote
 private agent notes to a customer. See [`docs/agent-capabilities.md`](docs/agent-capabilities.md).
@@ -125,7 +137,7 @@ private agent notes to a customer. See [`docs/agent-capabilities.md`](docs/agent
 | [`docs/demo.md`](docs/demo.md) | The reproducible reviewer demo, step by step |
 | [`docs/adding-a-provider.md`](docs/adding-a-provider.md) | Step-by-step provider extension guide |
 | [`docs/providers/freshdesk.md`](docs/providers/freshdesk.md) | Verified Freshdesk behaviors + sources |
-| [`docs/providers/woocommerce.md`](docs/providers/woocommerce.md) | WooCommerce auth/plan + what still needs verification |
+| [`docs/providers/woocommerce.md`](docs/providers/woocommerce.md) | Verified WooCommerce endpoints/parameters/auth + UNVERIFIED table |
 | [`docs/providers/zoho-inventory.md`](docs/providers/zoho-inventory.md) | Zoho Inventory OAuth 2.0 plan + verification gaps |
 | [`docs/providers/unicommerce.md`](docs/providers/unicommerce.md) | Unicommerce status: what is verified and what is explicitly UNVERIFIED |
 | [`docs/limitations.md`](docs/limitations.md) | What is not built, unverified, or intentionally excluded |

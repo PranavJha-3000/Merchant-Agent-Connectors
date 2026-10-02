@@ -10,6 +10,10 @@ What the connector lets an agent do today, and how it is steered.
 | `freshdesk_get_ticket` | Fetch one ticket by id |
 | `freshdesk_search_tickets` | Find tickets by field conditions |
 | `freshdesk_list_ticket_conversations` | Read a ticket's reply/note thread |
+| `woocommerce_list_orders` | Browse orders (paging, status, customer, product, date range) |
+| `woocommerce_get_order` | Fetch one order by id (line items, payment, customer note) |
+| `woocommerce_list_products` | Find products (search, exact SKU, status, stock state) |
+| `woocommerce_get_product` | Fetch one product by id (price, stock, categories) |
 
 Full contract: `docs/tool-spec.md`.
 
@@ -28,6 +32,18 @@ condition lists what needs attention first; each result carries the id needed fo
 
 **Escalation awareness.** Ticket detail exposes `isEscalated`, `dueBy` and
 `firstResponseDueBy`, so an agent can prioritise by deadline.
+
+**Work the fulfilment queue.** `woocommerce_list_orders` with
+`status: 'processing'` (or `pending` / `on-hold`) lists unfulfilled work;
+`woocommerce_get_order` gives the line items, payment date, and shipping city.
+
+**Answer "where is my order?"** `woocommerce_list_orders` by `customerId` (the
+docs have no email filter - the description steers the agent to the numeric id
+or `search`), then `woocommerce_get_order` for status and dates.
+
+**Check a SKU or stock.** `woocommerce_list_products` with the exact `sku`
+filter (preferred) or `search`, then `woocommerce_get_product` for detail;
+`stockStatus: 'outofstock'` answers "what can't we ship?".
 
 ## How the tools steer the agent
 
@@ -49,9 +65,10 @@ condition lists what needs attention first; each result carries the id needed fo
 
 ## What the agent cannot do (by design)
 
-- Create, update, close, reply to, or delete anything
-- Access attachments or contact records
-- Reach any provider other than Freshdesk today
+- Create, update, close, reply to, or delete anything (both providers are read-only)
+- Access attachments, contact records, refunds, or order notes
+- Reach Zoho Inventory or Unicommerce today (designed, not implemented - see `docs/provider-matrix.md`)
+- Filter WooCommerce orders by customer email (upstream documents no such parameter)
 - Bypass input validation (invalid arguments are rejected before any network call)
 - Read another tenant's data (credentials scope every request)
 
@@ -64,5 +81,10 @@ condition lists what needs attention first; each result carries the id needed fo
 | "Show me everything from mia.torres@example.test" | `freshdesk_list_tickets({ requesterEmail: 'mia.torres@example.test' })` |
 | "What did we tell the customer on ticket 101?" | `freshdesk_list_ticket_conversations({ ticketId: 101 })` |
 | "What changed since Monday?" | `freshdesk_list_tickets({ updatedSince: '<iso>', orderBy: 'updated_at' })` |
+| "Which orders are waiting to ship?" | `woocommerce_list_orders({ status: 'processing' })` |
+| "Show me order 42" | `woocommerce_get_order({ orderId: 42 })` |
+| "What has customer 7 ordered?" | `woocommerce_list_orders({ customerId: 7 })` |
+| "Do we still have the ACC-BLUE-M bottle?" | `woocommerce_list_products({ sku: 'ACC-BLUE-M' })` |
+| "Which products are out of stock?" | `woocommerce_list_products({ stockStatus: 'outofstock' })` |
 
 These flows are also expressed as deterministic tests in `docs/evaluation.md`.

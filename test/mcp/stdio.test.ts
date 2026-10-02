@@ -104,7 +104,8 @@ describe('stdio entrypoint (spawned process, real transport)', () => {
       const list = await server.request('tools/list');
       const tools = (list.result as { tools: Array<{ name: string }> }).tools.map((t) => t.name);
       expect(tools).toContain('freshdesk_search_tickets');
-      expect(tools).toHaveLength(4);
+      expect(tools).toContain('woocommerce_list_orders');
+      expect(tools).toHaveLength(8); // 4 Freshdesk + 4 WooCommerce
 
       const call = await server.request('tools/call', {
         name: 'freshdesk_get_ticket',

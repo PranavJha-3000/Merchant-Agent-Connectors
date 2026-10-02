@@ -2,8 +2,9 @@
 
 ## The problem
 
-An AI agent needs to reach merchant systems (Freshdesk today; WooCommerce, Zoho
-Inventory, Unicommerce next) safely and predictably. Left unconstrained, such
+An AI agent needs to reach merchant systems (Freshdesk and WooCommerce today;
+Zoho Inventory and Unicommerce next) safely and predictably. Left unconstrained,
+such
 integrations rot in three predictable ways:
 
 1. provider HTTP details leak upward into the agent-facing layer;

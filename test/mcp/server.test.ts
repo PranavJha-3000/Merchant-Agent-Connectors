@@ -23,6 +23,10 @@ describe('MCP server (stdio-agnostic, in-memory protocol)', () => {
       'freshdesk_list_ticket_conversations',
       'freshdesk_list_tickets',
       'freshdesk_search_tickets',
+      'woocommerce_get_order',
+      'woocommerce_get_product',
+      'woocommerce_list_orders',
+      'woocommerce_list_products',
     ]);
     for (const tool of tools) {
       expect(String(tool['description']).length).toBeGreaterThan(80);
@@ -49,6 +53,32 @@ describe('MCP server (stdio-agnostic, in-memory protocol)', () => {
     expect(result.isError).toBeFalsy();
     expect(result.structuredContent?.['provider']).toBe('freshdesk');
     expect((result.structuredContent?.['ticket'] as Record<string, unknown>)['id']).toBe(101);
+  });
+
+  it('executes a second provider through the same server (registry wiring end-to-end)', async () => {
+    const server = createConnectorServer({ mode: 'fixture', logger: createMemoryLogger(), env: {} });
+    const client = await connectMcp(server);
+    const ok = await client.request('tools/call', {
+      name: 'woocommerce_get_order',
+      arguments: { orderId: 42 },
+    });
+    const notFound = await client.request('tools/call', {
+      name: 'woocommerce_get_order',
+      arguments: { orderId: 999999 },
+    });
+    await client.close();
+
+    const okResult = ok.result as { isError?: boolean; structuredContent?: Record<string, unknown> };
+    expect(okResult.isError).toBeFalsy();
+    expect(okResult.structuredContent?.['provider']).toBe('woocommerce');
+    expect((okResult.structuredContent?.['order'] as Record<string, unknown>)['id']).toBe(42);
+
+    const errResult = notFound.result as { isError?: boolean; structuredContent?: unknown; content: Array<{ text: string }> };
+    expect(errResult.isError).toBe(true);
+    expect(errResult.structuredContent).toBeUndefined();
+    const payload = JSON.parse(errResult.content[0]!.text) as Record<string, unknown>;
+    expect(payload['code']).toBe('NOT_FOUND');
+    expect(payload['provider']).toBe('woocommerce');
   });
 
   it('returns isError:true (no structuredContent) for upstream failures', async () => {

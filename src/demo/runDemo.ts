@@ -51,8 +51,11 @@ function summarize(data: Record<string, unknown>): Record<string, unknown> {
     items: data['items'],
   };
   if (data['ticket']) out['ticket'] = data['ticket'];
+  if (data['order']) out['order'] = data['order'];
+  if (data['product']) out['product'] = data['product'];
   if (data['query']) out['query'] = data['query'];
   if (data['ticketId'] !== undefined) out['ticketId'] = data['ticketId'];
+  if (data['perPage'] !== undefined) out['perPage'] = data['perPage'];
   return out;
 }
 
@@ -133,6 +136,13 @@ async function main(): Promise<void> {
     });
   const unauthorized = build(brokenAuth);
   await show('401', unauthorized.tools, 'freshdesk_list_tickets', {});
+
+  heading('STEP 9 | WooCommerce (second provider: same architecture, own fixtures)');
+  await show('woo list', base.tools, 'woocommerce_list_orders', { status: 'processing' });
+  await show('woo product', base.tools, 'woocommerce_list_products', { sku: 'ACC-BLUE-M' });
+
+  heading('STEP 10 | WooCommerce failure: unknown order id -> NOT_FOUND (retryable:false)');
+  await show('woo 404', base.tools, 'woocommerce_get_order', { orderId: 999999 });
 
   heading('DEMO COMPLETE');
   process.stdout.write(

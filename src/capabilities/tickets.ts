@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { enumValueSchema } from './common.ts';
 import type { PageEnvelope } from '../core/pagination.ts';
 
 /**
@@ -14,10 +15,9 @@ import type { PageEnvelope } from '../core/pagination.ts';
  * optional = upstream may omit the field entirely.
  */
 
-export const enumValueSchema = z.object({
-  code: z.union([z.number(), z.string()]),
-  label: z.string(),
-});
+// Re-exported for existing consumers; the schema itself lives in common.ts
+// so sibling domains (orders, catalog) can share it without importing tickets.
+export { enumValueSchema };
 export type EnumValue = z.infer<typeof enumValueSchema>;
 
 export const ticketSummarySchema = z.object({
