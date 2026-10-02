@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+
+# Secrets — never commit real credentials
+.env
+.env.*
+!.env.example
+
+*.log

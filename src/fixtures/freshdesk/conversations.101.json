@@ -1,0 +1,35 @@
+[
+  {
+    "id": 9001,
+    "body": "<div>My refund for order ORD-7734 has not arrived after 6 business days.</div>",
+    "body_text": "My refund for order ORD-7734 has not arrived after 6 business days.",
+    "incoming": true,
+    "private": false,
+    "user_id": 501,
+    "ticket_id": 101,
+    "created_at": "2026-09-28T10:15:00Z",
+    "attachments": []
+  },
+  {
+    "id": 9002,
+    "body": "<div>Thanks for flagging this. I am checking the refund status with our payments team.</div>",
+    "body_text": "Thanks for flagging this. I am checking the refund status with our payments team.",
+    "incoming": false,
+    "private": false,
+    "user_id": 401,
+    "ticket_id": 101,
+    "created_at": "2026-09-29T09:30:00Z",
+    "attachments": []
+  },
+  {
+    "id": 9003,
+    "body": "<div>Internal: refund batch delayed by settlement outage, ETA 48h.</div>",
+    "body_text": "Internal: refund batch delayed by settlement outage, ETA 48h.",
+    "incoming": false,
+    "private": true,
+    "user_id": 401,
+    "ticket_id": 101,
+    "created_at": "2026-09-30T16:05:00Z",
+    "attachments": []
+  }
+]

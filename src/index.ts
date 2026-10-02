@@ -1,0 +1,14 @@
+/** Library entrypoint — no side effects, safe to import from tests and tools. */
+export * from './core/errors.ts';
+export * from './core/logger.ts';
+export * from './core/redact.ts';
+export * from './core/retry.ts';
+export * from './core/http.ts';
+export * from './core/auth.ts';
+export * from './core/pagination.ts';
+export * from './core/registry.ts';
+export * from './core/tools.ts';
+export * from './capabilities/tickets.ts';
+export { providerModules } from './providers/index.ts';
+export { freshdeskModule } from './providers/freshdesk/manifest.ts';
+export { createConnectorServer, buildConnectorTools } from './mcp/server.ts';

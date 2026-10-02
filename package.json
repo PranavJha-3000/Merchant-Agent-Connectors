@@ -1,0 +1,35 @@
+{
+  "name": "merchant-agent-connectors",
+  "version": "0.1.0",
+  "description": "Unified MCP connector platform giving AI agents secure, semantic access to merchant systems (Freshdesk reference connector; WooCommerce, Zoho Inventory, Unicommerce extension points).",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "demo": "node src/demo/runDemo.ts",
+    "inspect:tools": "node scripts/inspectTools.ts",
+    "serve:stdio": "node --env-file-if-exists=.env src/mcp/mainStdio.ts"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "connectors",
+    "freshdesk"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.2.0",
+    "zod": "^4.6.5"
+  }
+}
