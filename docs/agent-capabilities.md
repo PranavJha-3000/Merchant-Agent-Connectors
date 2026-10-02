@@ -14,6 +14,10 @@ What the connector lets an agent do today, and how it is steered.
 | `woocommerce_get_order` | Fetch one order by id (line items, payment, customer note) |
 | `woocommerce_list_products` | Find products (search, exact SKU, status, stock state) |
 | `woocommerce_get_product` | Fetch one product by id (price, stock, categories) |
+| `zoho_list_items` | Find inventory items (SKU, search, low-stock/inactive views, sorting) |
+| `zoho_get_item` | Fetch one item by id (stock on hand, reorder level, tax, codes) |
+| `zoho_list_sales_orders` | Page through Zoho sales orders (shipment state, totals) |
+| `zoho_get_sales_order` | Fetch one sales order by id (line items, shipment progress) |
 
 Full contract: `docs/tool-spec.md`.
 
@@ -45,6 +49,20 @@ or `search`), then `woocommerce_get_order` for status and dates.
 filter (preferred) or `search`, then `woocommerce_get_product` for detail;
 `stockStatus: 'outofstock'` answers "what can't we ship?".
 
+**Answer "do we still have it?" (Zoho).** `zoho_list_items` with `sku` for an
+exact lookup, or `filterBy: 'Status.Lowstock'` for "what needs reordering?" -
+each item carries `stockOnHand` next to `reorderLevel`, which is the comparison a
+support agent actually needs.
+
+**Check where an order is.** `zoho_list_sales_orders` pages the order book;
+`zoho_get_sales_order` shows shipment progress (`quantityShipped`,
+`shipmentDate`, `isBackorder`) plus line items - i.e. "why is SO-00004 late?" is
+answerable without leaving the connector.
+
+**Keep tenants separated.** Zoho requests always carry the configured
+`organization_id`; an agent cannot query another organization because the tool
+schemas do not accept one.
+
 ## How the tools steer the agent
 
 - **Names disambiguate siblings.** `list` vs `get` vs `search` vs
@@ -65,10 +83,12 @@ filter (preferred) or `search`, then `woocommerce_get_product` for detail;
 
 ## What the agent cannot do (by design)
 
-- Create, update, close, reply to, or delete anything (both providers are read-only)
+- Create, update, close, reply to, or delete anything (all providers are read-only)
 - Access attachments, contact records, refunds, or order notes
-- Reach Zoho Inventory or Unicommerce today (designed, not implemented - see `docs/provider-matrix.md`)
+- Reach Unicommerce today (designed, not implemented - see `docs/provider-matrix.md`)
 - Filter WooCommerce orders by customer email (upstream documents no such parameter)
+- Filter Zoho sales orders by status/date/customer (upstream documents no such parameter)
+- Choose which Zoho organization is queried (`organization_id` is configuration)
 - Bypass input validation (invalid arguments are rejected before any network call)
 - Read another tenant's data (credentials scope every request)
 
@@ -86,5 +106,8 @@ filter (preferred) or `search`, then `woocommerce_get_product` for detail;
 | "What has customer 7 ordered?" | `woocommerce_list_orders({ customerId: 7 })` |
 | "Do we still have the ACC-BLUE-M bottle?" | `woocommerce_list_products({ sku: 'ACC-BLUE-M' })` |
 | "Which products are out of stock?" | `woocommerce_list_products({ stockStatus: 'outofstock' })` |
+| "Do we still have ACC-BLUE-M?" | `zoho_list_items({ sku: 'ACC-BLUE-M' })` |
+| "What needs reordering?" | `zoho_list_items({ filterBy: 'Status.Lowstock' })` |
+| "Why is SO-00004 late?" | `zoho_get_sales_order({ salesOrderId: '4815000000045208' })` |
 
 These flows are also expressed as deterministic tests in `docs/evaluation.md`.

@@ -51,6 +51,36 @@ Task 11 additionally asserts a request counter did not move, encoding
 | 9 | `stop-after-auth-failure` | Store rejects the API key | `woocommerce_list_orders` | `AUTHENTICATION_ERROR`, `retryable: false` |
 | 10 | `reject-invalid-arguments-pre-network` | `productId: 0` | `woocommerce_get_product` | `VALIDATION_ERROR`, and **no upstream call** |
 
+## Tasks (Zoho Inventory, all deterministic)
+
+| # | Task id | Scenario | Tool | Expected outcome |
+|---|---|---|---|---|
+| 1 | `stock-lookup-by-sku` | Warehouse asks about a known SKU | `zoho_list_items` (`sku`) | success, 1 item with `stockOnHand` |
+| 2 | `find-low-stock-items` | Ops asks what needs reordering | `zoho_list_items` (`filterBy: 'Status.Lowstock'`) | success, every item has `stockOnHand <= reorderLevel` |
+| 3 | `retrieve-known-item` | Item detail for a given id | `zoho_get_item` | success |
+| 4 | `review-order-book` | Page through sales orders | `zoho_list_sales_orders` | success, `total: null`, `hasMore` from `page_context` |
+| 5 | `explain-late-order` | Shipment state of one order | `zoho_get_sales_order` | success, `shipmentDate: null` + `isBackorder: true` |
+| 6 | `empty-stock-search-is-not-an-error` | Nothing matches the search | `zoho_list_items` | success with `items: []` |
+| 7 | `unknown-item-id-is-not-found` | Item id does not exist | `zoho_get_item` | `NOT_FOUND`, `retryable: false` |
+| 8 | `reject-invalid-arguments-pre-network` | Non-numeric `itemId` | `zoho_get_item` | `VALIDATION_ERROR`, and **no upstream call at all** (not even a token request) |
+| 9 | `undocumented-filter-is-rejected` | Invented `sortColumn` | `zoho_list_items` | `VALIDATION_ERROR` - unverified parameters cannot reach the API |
+| 10 | `respect-quota-rate-limit` | 429 with documented quota code 45 | `zoho_list_items` | `RATE_LIMITED`, `retryable: true`, hint names the 100/min + daily quotas |
+| 11 | `token-never-leaks-to-the-agent` | Normal read | `zoho_list_items` | exactly ONE token exchange (singleflight) and no token in the response |
+
+Task 8 asserts the call counter never moves, encoding "validation happens before
+any network I/O - including OAuth" as a testable property. Task 11 asserts the
+token lifecycle is invisible to the agent.
+
+## Cross-provider routing (all three implemented)
+
+| Merchant request | Correct tool | Why not the others |
+|---|---|---|
+| "Any urgent support tickets?" | `freshdesk_search_tickets` | tickets are a different resource |
+| "Which orders are waiting to ship?" | `woocommerce_list_orders` (`status: 'processing'`) | Zoho has no documented status filter; Freshdesk has no orders |
+| "Where is order SO-00004?" | `zoho_get_sales_order` | WooCommerce ids are numeric store ids, not `SO-…` numbers |
+| "Is ACC-BLUE-M in stock?" | `zoho_list_items` (`sku`) | WooCommerce products carry `stockStatus`, not `stockOnHand` |
+| "What did we tell the customer?" | `freshdesk_list_ticket_conversations` | only Freshdesk exposes a conversation thread |
+
 Both suites live in `test/eval/` and assert tool selection, argument shapes,
 result classes, empty-vs-missing discrimination, and retryable signalling -
 the deterministic contract an LLM depends on.

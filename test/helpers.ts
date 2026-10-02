@@ -5,6 +5,7 @@ import type { ToolDefinition } from '../src/core/tools.ts';
 import { buildConnectorTools } from '../src/mcp/server.ts';
 import { freshdeskModule } from '../src/providers/freshdesk/manifest.ts';
 import { woocommerceModule } from '../src/providers/woocommerce/manifest.ts';
+import { zohoInventoryModule } from '../src/providers/zoho/manifest.ts';
 
 interface BuiltTools {
   tools: ToolDefinition[];
@@ -12,10 +13,12 @@ interface BuiltTools {
   logger: MemoryLogger;
 }
 
-function buildModuleTools(
-  module: (typeof freshdeskModule | typeof woocommerceModule),
-  options: { fetchImpl?: FetchLike },
-): BuiltTools {
+type AnyModule =
+  | typeof freshdeskModule
+  | typeof woocommerceModule
+  | typeof zohoInventoryModule;
+
+function buildModuleTools(module: AnyModule, options: { fetchImpl?: FetchLike }): BuiltTools {
   const logger = createMemoryLogger();
   const bundles = buildConnectorTools({
     modules: [module],
@@ -36,6 +39,11 @@ export function freshdeskTools(options: { fetchImpl?: FetchLike } = {}): BuiltTo
 /** Build WooCommerce tools against fixtures (default) or an injected fetch, with a memory logger. */
 export function woocommerceTools(options: { fetchImpl?: FetchLike } = {}): BuiltTools {
   return buildModuleTools(woocommerceModule, options);
+}
+
+/** Build Zoho Inventory tools against fixtures (default) or an injected fetch, with a memory logger. */
+export function zohoTools(options: { fetchImpl?: FetchLike } = {}): BuiltTools {
+  return buildModuleTools(zohoInventoryModule, options);
 }
 
 interface JsonRpcResponse {

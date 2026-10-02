@@ -14,9 +14,9 @@ Run time is about one second. Only `fetchedAt`/`ts` fields differ between runs.
 
 ## Transcript outline
 
-**STEP 1 - Tool discovery.** Lists the eight tools (4 Freshdesk +
-4 WooCommerce) with their first description line and read-only annotations,
-i.e. exactly what `tools/list` advertises.
+**STEP 1 - Tool discovery.** Lists the twelve tools (4 Freshdesk +
+4 WooCommerce + 4 Zoho Inventory) with their first description line and
+read-only annotations, i.e. exactly what `tools/list` advertises.
 
 **STEP 2 - Search.** `freshdesk_search_tickets({ query: 'status:2 AND priority:3' })`
 returns `total: 1` with normalized `status: {code: 2, label: 'Open'}` and
@@ -92,6 +92,25 @@ registry -> adapter -> HTTP pipeline, only the provider module differs.
 returns the same `NOT_FOUND` / `retryable: false` envelope shape as Freshdesk's
 404, with `provider: "woocommerce"` - identical failure contract across
 providers.
+
+**STEP 11 - Zoho Inventory (third provider, OAuth 2.0).**
+`zoho_list_items({ filterBy: 'Status.Lowstock' })` returns the item below its
+reorder level (`stockOnHand: 8` next to `reorderLevel: 20`), and
+`zoho_get_sales_order({ salesOrderId: '4815000000045208' })` returns line items
+and shipment progress (`shipmentDate: null`, `isBackorder: true`). Behind the
+scenes the connector exchanged its refresh token for an access token in memory
+and sent `Authorization: Zoho-oauthtoken …` - neither the token nor the
+`organization_id` argument appears in any tool output.
+
+**STEP 12 - Zoho failure (404).** `zoho_get_item({ itemId: '4815000000099999' })`
+returns the shared `NOT_FOUND` / `retryable: false` envelope.
+
+**STEP 13 - Zoho token refresh (the provider-specific reliability behavior).**
+The first call is answered with Zoho's documented `401 Unauthorized (Invalid
+AuthToken)`. The connector performs **one** refresh-token exchange, replays the
+request once, and the agent sees a normal success. The demo prints
+`token exchanges: 2 (initial + 1 refresh)`, and the test suite asserts exactly
+that count - proving refresh-once + singleflight rather than a retry loop.
 
 ## Reviewer script
 

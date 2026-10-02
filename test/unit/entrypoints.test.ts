@@ -38,7 +38,7 @@ describe('entrypoint output portability', () => {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     });
-    for (let step = 1; step <= 10; step += 1) {
+    for (let step = 1; step <= 13; step += 1) {
       expect(output, `demo stopped before STEP ${step}`).toContain(`STEP ${step} |`);
     }
     expect(output).toContain('DEMO COMPLETE');
@@ -55,5 +55,12 @@ describe('entrypoint output portability', () => {
     expect(output).toContain('STEP 9 |');
     expect(output).toContain('"provider": "woocommerce"');
     expect(output).toContain('"code": "processing"');
+    // The OAuth provider: 13 proves one 401 -> exactly one token exchange -> replay.
+    expect(output).toContain('STEP 13 |');
+    expect(output).toContain('token exchanges: 2 (initial + 1 refresh)');
+    expect(output).toContain('"provider": "zoho-inventory"');
+    // No token may ever be printed.
+    expect(output).not.toContain('Zoho-oauthtoken');
+    expect(output).not.toContain('demo_token_');
   });
 });

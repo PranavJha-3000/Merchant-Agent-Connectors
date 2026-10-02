@@ -284,6 +284,133 @@ capability.
 
 ---
 
+## zoho_list_items
+
+**Purpose** - list Zoho Inventory items with pagination and documented filters
+(search text, exact SKU, status views, sorting).
+
+**Use when** - answering stock questions ("do we have X?", "what is below
+reorder level?"), locating an item by name or SKU, or finding an item id.
+
+**Do NOT use when** - you already have an item id (`zoho_get_item`), or you need
+sales orders (`zoho_list_sales_orders` - items and orders are different
+resources). Note Zoho items are NOT the same thing as WooCommerce products: this
+is warehouse stock (`stockOnHand`, `reorderLevel`), not a storefront listing.
+
+**Input**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `page` | integer >= 1 | no (default 1) | 1-based |
+| `perPage` | integer 1..500 | no (default 200) | 200 is Zoho's documented default; 500 is a **connector cap** (no maximum documented) |
+| `searchText` | string 1..100 | no | Zoho `search_text`: "Search items by name, SKU, or other searchable fields" |
+| `sku` | string 1..100 | no | Zoho `sku`: EXACT match - prefer this when the SKU is known |
+| `filterBy` | enum | no | Documented `filter_by` status views: `Status.All`, `Status.Active`, `Status.Inactive`, `Status.Lowstock`, `Status.Unmapped`, `Status.Uncategorized`, `Status.Grouped`. ItemType views are deliberately not exposed |
+| `sortColumn` | enum | no | `name`, `sku`, `rate`, `purchase_rate`, `created_time`, `last_modified_time`, `reorder_level`, `stock_on_hand` |
+| `sortOrder` | enum | no | `A` ascending, `D` descending |
+
+**Output** - page envelope `{ provider, fetchedAt, page, perPage, hasMore, total, items[] }`.
+`total` is always `null` (Zoho reports no total) and `hasMore` comes from the
+upstream `page_context.has_more_page`. Items are `InventoryItemSummary`:
+`{ provider, id, name, sku, status, itemType, productType, groupName, rate,
+stockOnHand, reorderLevel, isTaxable, createdAt, updatedAt }` with ids as
+**strings** (16-digit Zoho ids preserved exactly) and money as a **number**.
+
+**Failure semantics** - 401 `AUTHENTICATION_ERROR` (after one automatic token
+refresh + replay); 400 `VALIDATION_ERROR` (hint names `organization_id`); 404
+`NOT_FOUND`; 429 `RATE_LIMITED` (retryable, hint carries the documented
+100 req/min + daily plan quotas); 5xx retried then `UPSTREAM_UNAVAILABLE`.
+Empty match = success with `items: []`.
+
+**Security** - read-only; requires `ZohoInventory.items.READ`. `organization_id`
+is configuration, never an argument.
+
+**Kind** - provider-specific tool wrapping the new `InventoryListable`
+capability.
+
+---
+
+## zoho_get_item
+
+**Purpose** - fetch exactly one Zoho item by `item_id`, with stock on hand,
+reorder level, tax treatment, purchase data and item codes.
+
+**Use when** - you already have an item id (from `zoho_list_items` or the user).
+
+**Do NOT use when** - you only have a SKU or name - use `zoho_list_items`
+(`sku`/`searchText`) first.
+
+**Input** - `itemId` (numeric string or number, 1-20 digits, required).
+
+**Output** - `{ provider, fetchedAt, item }` where `item` is `InventoryItemDetail`
+(summary plus `description, purchaseDescription, purchaseRate, taxName,
+taxPercentage, upc, ean, isbn, partNumber, attributeNames[], hasImage`).
+
+**Failure semantics** - unknown id -> `NOT_FOUND`, `retryable: false`.
+
+**Security** - read-only; product/catalog data, no customer records.
+
+**Kind** - provider-specific tool wrapping `InventoryReadable`.
+
+---
+
+## zoho_list_sales_orders
+
+**Purpose** - page through Zoho sales orders (shipment state, customer, totals).
+
+**Use when** - reviewing the order book, checking what has shipped vs what is
+still open, or locating a sales order id first.
+
+**Do NOT use when** - you already have a sales order id (`zoho_get_sales_order`),
+or you need stock data (`zoho_list_items`). Do NOT assume WooCommerce-style
+filters: Zoho documents no status/date/customer filter for this endpoint.
+
+**Input** - `page` (>= 1, default 1), `perPage` (1..500, default 200).
+
+**Output** - page envelope with `SalesOrderSummary` items:
+`{ provider, id, salesOrderNumber, referenceNumber, status, customerName,
+customerId, date, total, currencyCode, baseCurrencyTotal, quantity,
+quantityShipped, shipmentDate, createdAt, updatedAt }`. `total` is a **number**
+here (unlike the WooCommerce string decimal) and ids are **strings**.
+`status.label` is humanized from the raw code because Zoho does not publish the
+full status enum.
+
+**Failure semantics** - same matrix as items; empty page = success.
+
+**Security** - read-only; requires `ZohoInventory.salesorders.READ`.
+`customerName` is customer data - keep it inside the merchant context.
+
+**Kind** - provider-specific tool wrapping the new `SalesOrderListable`
+capability (deliberately NOT the WooCommerce order model - see
+`docs/providers/zoho-inventory.md`).
+
+---
+
+## zoho_get_sales_order
+
+**Purpose** - fetch exactly one Zoho sales order by `salesorder_id`, including
+line items and shipment/invoicing progress.
+
+**Use when** - you already have a sales order id.
+
+**Do NOT use when** - you only have a customer name or a number fragment - page
+through `zoho_list_sales_orders` first.
+
+**Input** - `salesOrderId` (numeric string or number, 1-20 digits, required).
+
+**Output** - `{ provider, fetchedAt, salesOrder }` where `salesOrder` is
+`SalesOrderDetail` (summary plus `expectedShipmentDate, shipmentDays,
+quantityInvoiced, quantityPacked, salesChannel, isEmailed, isDropShipment,
+isBackorder, lineItems[], itemCount`).
+
+**Failure semantics** - unknown id -> `NOT_FOUND`, `retryable: false`.
+
+**Security** - read-only; contains customer name, so treat as customer data.
+
+**Kind** - provider-specific tool wrapping `SalesOrderReadable`.
+
+---
+
 ## Planned tools (not implemented)
 
 Design intent only; each requires verification before implementation. See
@@ -291,7 +418,7 @@ Design intent only; each requires verification before implementation. See
 
 | Provider | Planned tools | Source to verify |
 |---|---|---|
-| Zoho Inventory | `zoho_list_items`, `zoho_get_item`, `zoho_list_sales_orders`, `zoho_get_sales_order` | https://www.zoho.com/inventory/api/v1/ |
+| Zoho Inventory | items, sales orders — **VERIFIED** (Phase 5) | https://www.zoho.com/inventory/api/v1/ |
 | Unicommerce | `unicommerce_search_sale_orders`, `unicommerce_get_sale_order` | https://documentation.unicommerce.com/ |
 
 ## Adding a tool

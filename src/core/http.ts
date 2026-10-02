@@ -197,6 +197,12 @@ export class HttpClient {
             clearTimeout(timer);
           }
         } catch (fetchErr) {
+          // An AuthStrategy may fail to produce headers at all (e.g. Zoho's
+          // token strategy raising AuthenticationError when the grant is dead).
+          // That error is already normalized, so propagate it unchanged instead
+          // of misclassifying it as a network failure and burning retries on a
+          // problem that is not transient.
+          if (isConnectorError(fetchErr)) throw fetchErr;
           const err = timedOut
             ? new TimeoutError({
                 provider: this.provider,

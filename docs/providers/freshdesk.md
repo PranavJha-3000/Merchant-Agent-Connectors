@@ -83,6 +83,16 @@ a budget. It paces requests, honors `Retry-After`, bounds the wait, and reports
 recommendation (queue calls, avoid deep pagination) is reflected in the pacing and
 by not encouraging page numbers above 500.
 
+## UNVERIFIED / deliberate gaps
+
+| Item | Status | Consequence |
+|---|---|---|
+| Which rate-limit bucket applies to a given account | Freshdesk states limits are plan-dependent and per-endpoint; the applicable number is not knowable from the docs alone | No hardcoded budget - pace, honor `Retry-After`, bound the wait, and surface `retryAfterMs` |
+| Exact numeric `code` values on error bodies | Status codes and the error *shape* are verified; individual machine codes are not enumerated | Mapping keys off HTTP status; the body message is borrowed for detail only |
+| Custom ticket statuses | Docs confirm merchants can define their own statuses | Unknown codes normalize to `{ code, label: 'unknown' }` instead of failing |
+| Whether `search/tickets` paginates beyond the first page | The endpoint documents `query` only; no paging parameters were verified | The tool pages the ticket list and searches the first page only, and says so in its description |
+| Conversation endpoint paging | `page`/`per_page` accepted, defaults not stated | Tool applies the same 1-based paging contract and never claims a total |
+
 ## Implementation map
 
 ```

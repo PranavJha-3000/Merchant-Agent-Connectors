@@ -9,7 +9,7 @@ import { connectMcp } from '../helpers.ts';
  */
 
 describe('MCP server (stdio-agnostic, in-memory protocol)', () => {
-  it('lists exactly the shipped Freshdesk tools with descriptions and read-only annotations', async () => {
+  it('lists exactly the shipped tools with descriptions and read-only annotations', async () => {
     const server = createConnectorServer({ mode: 'fixture', logger: createMemoryLogger(), env: {} });
     const client = await connectMcp(server);
     const res = await client.request('tools/list');
@@ -27,6 +27,10 @@ describe('MCP server (stdio-agnostic, in-memory protocol)', () => {
       'woocommerce_get_product',
       'woocommerce_list_orders',
       'woocommerce_list_products',
+      'zoho_get_item',
+      'zoho_get_sales_order',
+      'zoho_list_items',
+      'zoho_list_sales_orders',
     ]);
     for (const tool of tools) {
       expect(String(tool['description']).length).toBeGreaterThan(80);

@@ -53,6 +53,8 @@ function summarize(data: Record<string, unknown>): Record<string, unknown> {
   if (data['ticket']) out['ticket'] = data['ticket'];
   if (data['order']) out['order'] = data['order'];
   if (data['product']) out['product'] = data['product'];
+  if (data['item']) out['item'] = data['item'];
+  if (data['salesOrder']) out['salesOrder'] = data['salesOrder'];
   if (data['query']) out['query'] = data['query'];
   if (data['ticketId'] !== undefined) out['ticketId'] = data['ticketId'];
   if (data['perPage'] !== undefined) out['perPage'] = data['perPage'];
@@ -143,6 +145,47 @@ async function main(): Promise<void> {
 
   heading('STEP 10 | WooCommerce failure: unknown order id -> NOT_FOUND (retryable:false)');
   await show('woo 404', base.tools, 'woocommerce_get_order', { orderId: 999999 });
+
+  heading('STEP 11 | Zoho Inventory (third provider: OAuth 2.0 in-memory token, own fixtures)');
+  await show('zoho items', base.tools, 'zoho_list_items', { filterBy: 'Status.Lowstock' });
+  await show('zoho order', base.tools, 'zoho_get_sales_order', { salesOrderId: '4815000000045208' });
+
+  heading('STEP 12 | Zoho Inventory failure: 404 -> NOT_FOUND (retryable:false)');
+  await show('zoho 404', base.tools, 'zoho_get_item', { itemId: '4815000000099999' });
+
+  heading('STEP 13 | Zoho Inventory failure: expired token -> refresh once, then replay');
+  // The token strategy is singleflight and in-memory: one 401 triggers exactly
+  // one refresh-token exchange, then the original request is replayed once.
+  const zohoTokenHolder = { calls: 0 };
+  const transientToken: FetchLike = async (url) => {
+    if (url.includes('/oauth/v2/token')) {
+      zohoTokenHolder.calls += 1;
+      return new Response(JSON.stringify({ access_token: `1000.demo_token_${zohoTokenHolder.calls}`, expires_in: 3600 }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    if (zohoTokenHolder.calls === 1) {
+      // First data call happens with the FIRST token: Zoho documents 401 as
+      // "Unauthorized (Invalid AuthToken)" when it has expired.
+      return new Response(JSON.stringify({ code: 100, message: 'Invalid OAuth token.' }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    return new Response(
+      JSON.stringify({
+        code: 0,
+        message: 'success',
+        items: [{ item_id: '4815000000044208', name: 'Insulated Bottle - Blue (Medium)', sku: 'ACC-BLUE-M', status: 'active', item_type: 'inventory', rate: 24.5, stock_on_hand: 148, reorder_level: 25 }],
+        page_context: { page: 1, per_page: 200, has_more_page: false },
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+  };
+  const refreshDemo = build(transientToken);
+  await show('zoho 401 -> refresh', refreshDemo.tools, 'zoho_list_items', { sku: 'ACC-BLUE-M' });
+  process.stdout.write(`  token exchanges: ${zohoTokenHolder.calls} (initial + 1 refresh)\n`);
 
   heading('DEMO COMPLETE');
   process.stdout.write(

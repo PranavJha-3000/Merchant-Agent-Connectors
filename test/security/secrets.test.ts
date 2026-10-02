@@ -6,7 +6,7 @@ import { executeToolDefinition } from '../../src/core/tools.ts';
 import { createFixtureFetch } from '../../src/fixtures/transport.ts';
 import { freshdeskFixtureRoutes } from '../../src/providers/freshdesk/routes.ts';
 import { woocommerceFixtureRoutes } from '../../src/providers/woocommerce/routes.ts';
-import { freshdeskTools, woocommerceTools } from '../helpers.ts';
+import { freshdeskTools, woocommerceTools, zohoTools } from '../helpers.ts';
 
 /**
  * Security tests: prove (not just promise) that credentials and real customer
@@ -55,6 +55,100 @@ describe('secrets never reach logs', () => {
     const result = await executeToolDefinition(byName.get('freshdesk_list_tickets')!, {});
     expect(result.isError).toBe(true);
     assertNoSecrets(JSON.stringify(result));
+  });
+});
+
+describe('Zoho Inventory secrets never reach logs, errors, output or URLs', () => {
+  // Fixture OAuth values (see providers/zoho/config.ts FIXTURE_ZOHO_CONFIG).
+  const CLIENT_ID = '1000.fixtureclientid';
+  const CLIENT_SECRET = 'fixture_client_secret_not_a_real_value';
+  const REFRESH_TOKEN = '1000.fixturerefreshtoken.not-a-real-value';
+  const ACCESS_TOKEN = '1000.fixture_access_token_not_a_real_token';
+
+  function assertNoZohoSecrets(serialized: string): void {
+    expect(serialized).not.toContain(CLIENT_ID);
+    expect(serialized).not.toContain(CLIENT_SECRET);
+    expect(serialized).not.toContain(REFRESH_TOKEN);
+    expect(serialized).not.toContain(ACCESS_TOKEN);
+    expect(serialized).not.toContain('Zoho-oauthtoken');
+  }
+
+  it('covers success, auth failure, rate limit and malformed-body flows', async () => {
+    const scenarios: FetchLike[] = [
+      // success against fixtures
+      async (url) =>
+        url.includes('/oauth/v2/token')
+          ? new Response(JSON.stringify({ access_token: ACCESS_TOKEN, expires_in: 3600 }), { status: 200 })
+          : new Response(
+              JSON.stringify({
+                code: 0,
+                message: 'success',
+                items: [{ item_id: '4815000000044208', name: 'Item', sku: 'X', stock_on_hand: 3 }],
+                page_context: { page: 1, per_page: 200, has_more_page: false },
+              }),
+              { status: 200, headers: { 'content-type': 'application/json' } },
+            ),
+      // expired/revoked token
+      async () => new Response(JSON.stringify({ code: 100, message: 'Invalid OAuth token.' }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
+      }),
+      // rate limited
+      async () => new Response(JSON.stringify({ code: 45, message: 'exceeded' }), {
+        status: 429,
+        headers: { 'content-type': 'application/json', 'retry-after': '0' },
+      }),
+      // schema drift
+      async () => new Response(JSON.stringify({ code: 0, items: 'oops' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ];
+
+    for (const fetchImpl of scenarios) {
+      const { byName, logger } = zohoTools({ fetchImpl });
+      await executeToolDefinition(byName.get('zoho_list_items')!, {});
+      const result = await executeToolDefinition(byName.get('zoho_get_item')!, { itemId: '4815000000044208' });
+      assertNoZohoSecrets(JSON.stringify(result));
+      assertNoZohoSecrets(JSON.stringify(logger.entries));
+      expect(JSON.stringify(logger.entries)).not.toContain('"authorization"');
+    }
+  });
+
+  it('never puts credentials in a request URL', async () => {
+    const urls: string[] = [];
+    const fetchImpl: FetchLike = async (url, init) => {
+      urls.push(`${init.method ?? 'GET'} ${url}`);
+      if (url.includes('/oauth/v2/token')) {
+        // The exchange carries client_secret/refresh_token in the BODY only.
+        expect(url).not.toContain(CLIENT_SECRET);
+        expect(url).not.toContain(REFRESH_TOKEN);
+        return new Response(JSON.stringify({ access_token: ACCESS_TOKEN, expires_in: 3600 }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ code: 0, message: 'success', salesorders: [], page_context: null }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    };
+    const { byName } = zohoTools({ fetchImpl });
+    await executeToolDefinition(byName.get('zoho_list_sales_orders')!, {});
+    expect(urls.length).toBeGreaterThanOrEqual(2);
+    assertNoZohoSecrets(urls.join('\n'));
+  });
+
+  it('reports a dead grant without echoing the token response', async () => {
+    const deadGrant: FetchLike = async (url) => {
+      if (url.includes('/oauth/v2/token')) {
+        // Zoho returns an `error` member on OAuth failures.
+        return new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 200 });
+      }
+      throw new Error('must not be reached');
+    };
+    const { byName } = zohoTools({ fetchImpl: deadGrant });
+    const result = await executeToolDefinition(byName.get('zoho_list_items')!, {});
+    expect(result.isError).toBe(true);
+    assertNoZohoSecrets(JSON.stringify(result));
+    expect(JSON.stringify(result)).toContain('AUTHENTICATION_ERROR');
   });
 });
 

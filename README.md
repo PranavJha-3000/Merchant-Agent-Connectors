@@ -1,9 +1,10 @@
 ﻿# Merchant Agent Connectors
 
 An MCP connector platform that gives AI agents secure, semantic access to merchant
-systems. **Freshdesk is the reference implementation** and **WooCommerce is a
-second provider plugged into the same architecture**; Zoho Inventory and
-Unicommerce follow the identical extension seam without touching existing code.
+systems. **Freshdesk is the reference implementation**; **WooCommerce** and
+**Zoho Inventory** are additional providers plugged into the same architecture
+via the same extension seam, with no shared code duplicated. Unicommerce follows
+that seam without touching existing providers.
 
 The whole test suite and demo run with **zero credentials** (deterministic fixture
 mode).
@@ -34,7 +35,7 @@ AI Agent / MCP Host
 |---|---|---|---|
 | **Freshdesk** | reference implementation | API key (HTTP Basic) | tickets: list, get, search, conversations |
 | **WooCommerce** | implemented (Phase 4) | REST API key (HTTPS Basic) | orders: list, get · products: list, get |
-| Zoho Inventory | designed, not implemented | OAuth 2.0 (auth code + refresh) | items, sales orders (planned) |
+| **Zoho Inventory** | implemented (Phase 5) | OAuth 2.0 (refresh token, in-memory) | items: list, get · sales orders: list, get |
 | Unicommerce | designed, not implemented | OAuth token (docs verified in part) | sale orders (planned) |
 
 Full matrix and verification status: [`docs/provider-matrix.md`](docs/provider-matrix.md).
@@ -93,7 +94,19 @@ FRESHDESK_API_KEY=your-api-key       # create via Freshdesk Profile > API Key
 WOOCOMMERCE_BASE_URL=https://shop.example.com
 WOOCOMMERCE_CONSUMER_KEY=ck_your_key
 WOOCOMMERCE_CONSUMER_SECRET=cs_your_secret
+
+# Zoho Inventory (OAuth 2.0 - see docs/providers/zoho-inventory.md)
+ZOHO_DATA_CENTER=com                   # com | in | eu | com.au | ca
+ZOHO_ORGANIZATION_ID=10234695          # Manage Organizations in the admin console
+ZOHO_CLIENT_ID=1000.xxxx               # OAuth app "Client ID"
+ZOHO_CLIENT_SECRET=xxxx                # OAuth app "Client Secret"
+ZOHO_REFRESH_TOKEN=1000.xxxx.xxxx      # obtained once via the auth-code flow
 ```
+
+Zoho setup is a one-time operator step (the browser authorization-code flow with
+`access_type=offline`), after which only the refresh token is needed. Scopes:
+`ZohoInventory.items.READ`, `ZohoInventory.salesorders.READ`. Access tokens are
+held **in memory only** and refreshed automatically.
 
 ```bash
 CONNECTOR_MODE=live npm run serve:stdio
@@ -103,8 +116,9 @@ FRESHDESK_DOMAIN=... FRESHDESK_API_KEY=... npx vitest run test/integration
 ```
 
 Live mode uses read-only endpoints only (Freshdesk tickets; WooCommerce orders
-and products). Missing configuration fails fast with a `ConfigurationError`
-before any network call, and credentials are never logged.
+and products; Zoho Inventory items and sales orders). Missing configuration fails
+fast with a `ConfigurationError` before any network call, and credentials are
+never logged.
 
 ## What the agent can do today
 
@@ -119,6 +133,8 @@ before any network call, and credentials are never logged.
 | Read one order (line items, payment, customer note) | `woocommerce_get_order` |
 | Find a product by exact SKU or name | `woocommerce_list_products` (`sku` / `search`) |
 | Check price and stock state of a product | `woocommerce_get_product` |
+| Check real stock levels / what needs reordering | `zoho_list_items` (`sku`, `filterBy: 'Status.Lowstock'`) |
+| Review the order book and shipment progress | `zoho_list_sales_orders`, `zoho_get_sales_order` |
 
 It cannot write anything, and it is told (in tool descriptions) to never quote
 private agent notes to a customer. See [`docs/agent-capabilities.md`](docs/agent-capabilities.md).
@@ -138,7 +154,7 @@ private agent notes to a customer. See [`docs/agent-capabilities.md`](docs/agent
 | [`docs/adding-a-provider.md`](docs/adding-a-provider.md) | Step-by-step provider extension guide |
 | [`docs/providers/freshdesk.md`](docs/providers/freshdesk.md) | Verified Freshdesk behaviors + sources |
 | [`docs/providers/woocommerce.md`](docs/providers/woocommerce.md) | Verified WooCommerce endpoints/parameters/auth + UNVERIFIED table |
-| [`docs/providers/zoho-inventory.md`](docs/providers/zoho-inventory.md) | Zoho Inventory OAuth 2.0 plan + verification gaps |
+| [`docs/providers/zoho-inventory.md`](docs/providers/zoho-inventory.md) | Verified Zoho OAuth/data-center/limits facts + UNVERIFIED table |
 | [`docs/providers/unicommerce.md`](docs/providers/unicommerce.md) | Unicommerce status: what is verified and what is explicitly UNVERIFIED |
 | [`docs/limitations.md`](docs/limitations.md) | What is not built, unverified, or intentionally excluded |
 

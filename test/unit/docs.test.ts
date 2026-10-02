@@ -83,4 +83,26 @@ describe('documentation integrity', () => {
     const unicommerce = readFileSync(new URL('docs/providers/unicommerce.md', repoRoot), 'utf8');
     expect(unicommerce).toContain('UNVERIFIED');
   });
+
+  it('every implemented provider documents its verified sources and UNVERIFIED gaps', () => {
+    // Each shipped connector must cite official docs and be explicit about what
+    // could not be verified (AGENTS.md §13).
+    for (const provider of ['freshdesk', 'woocommerce', 'zoho-inventory']) {
+      const page = readFileSync(new URL(`docs/providers/${provider}.md`, repoRoot), 'utf8');
+      expect(page, `${provider} doc must cite official sources`).toContain('https://');
+      expect(page, `${provider} doc must mark unverified items`).toContain('UNVERIFIED');
+      expect(page, `${provider} doc must state a check date`).toContain('2026-');
+    }
+  });
+
+  it('the provider matrix matches the providers the code actually registers', () => {
+    const matrix = readFileSync(new URL('docs/provider-matrix.md', repoRoot), 'utf8');
+    for (const id of ['freshdesk', 'woocommerce', 'zoho-inventory', 'unicommerce']) {
+      expect(matrix, `matrix must list ${id}`).toContain(`\`${id}\``);
+    }
+    // Unicommerce is the only one still unimplemented - the matrix must say so.
+    const unicommerceRow = matrix.split('\n').find((l) => l.includes('`unicommerce`'));
+    expect(unicommerceRow).toBeDefined();
+    expect(unicommerceRow!).toContain('not yet implemented');
+  });
 });

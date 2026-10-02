@@ -105,7 +105,8 @@ describe('stdio entrypoint (spawned process, real transport)', () => {
       const tools = (list.result as { tools: Array<{ name: string }> }).tools.map((t) => t.name);
       expect(tools).toContain('freshdesk_search_tickets');
       expect(tools).toContain('woocommerce_list_orders');
-      expect(tools).toHaveLength(8); // 4 Freshdesk + 4 WooCommerce
+      expect(tools).toContain('zoho_list_items'); // the OAuth provider is reachable over stdio too
+      expect(tools).toHaveLength(12); // 4 Freshdesk + 4 WooCommerce + 4 Zoho Inventory
 
       const call = await server.request('tools/call', {
         name: 'freshdesk_get_ticket',

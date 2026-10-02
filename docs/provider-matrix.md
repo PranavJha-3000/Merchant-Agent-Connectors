@@ -8,7 +8,7 @@ Legend for verification: **VERIFIED** = confirmed against official documentation
 |---|---|---|---|---|---|
 | `freshdesk` | ✅ reference implementation | API key via HTTP Basic — **VERIFIED** | `tickets.list` `tickets.get` `tickets.search` `tickets.conversations` — **VERIFIED** | ❌ out of scope (read-only V1) | Full vertical slice: tools, fixtures, evals, demo |
 | `woocommerce` | ✅ implemented (Phase 4) | REST API key over HTTPS Basic — **VERIFIED** (docs) | `orders.list` `orders.get` `products.list` `products.get` — **VERIFIED** (endpoints + parameters) | ❌ | Same reliability pipeline as Freshdesk; `per_page` cap is connector-imposed (Woo documents no max); rate limits not documented upstream — generic 429 handling applies |
-| `zoho-inventory` | ⚠️ designed, not yet implemented | OAuth 2.0 authorization-code + refresh — **VERIFIED** (docs) | items, sales orders (planned) | ❌ | Phase 5 — per-data-center endpoints required |
+| `zoho-inventory` | ✅ implemented (Phase 5) | OAuth 2.0 refresh-token, `Authorization: Zoho-oauthtoken …` — **VERIFIED** (docs); in-memory token, singleflight, refresh-on-401-replay | `items.list` `items.get` `salesorders.list` `salesorders.get` — **VERIFIED** (endpoints + parameters) | ❌ | `organization_id` is config, never a tool argument; separate item/sales-order models (money is a number, ids are strings); live pacing 700ms for the documented 100 req/min; sales-order status enum unverified → humanized labels |
 | `unicommerce` | ⚠️ designed, not yet implemented | OAuth password-grant token (official docs) — **PARTIAL** | sale orders (planned) | ❌ | Phase 6 — API paths pending verification; will not ship unverified endpoints |
 
 ## Capability semantics

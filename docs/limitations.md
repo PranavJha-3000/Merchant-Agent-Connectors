@@ -3,14 +3,14 @@
 This file is the honest counterweight to the rest of the documentation. Anything
 unverified is labelled UNVERIFIED and is deliberately **not** implemented.
 
-## 1. Two providers are implemented; two are not
+## 1. Three providers are implemented; one is not
 
-Freshdesk (reference) and WooCommerce (Phase 4) are complete. Zoho Inventory and
-Unicommerce are **designed but not implemented**. Adding a provider is a
+Freshdesk (reference), WooCommerce (Phase 4) and Zoho Inventory (Phase 5) are
+complete. Unicommerce is **designed but not implemented**. Adding a provider is a
 deliberate, gated step (`docs/adding-a-provider.md`), not a matter of dropping
 in a URL.
 
-Rationale: one reference-quality vertical slice is more valuable than four
+Rationale: one reference-quality vertical slice is more valuable than three
 shallow connectors; expansion proceeds only while quality holds. See
 `docs/provider-matrix.md` for status.
 
@@ -52,13 +52,38 @@ Full table with consequences: `docs/providers/woocommerce.md`. Summary:
 - **Query-string credentials** - documented upstream as a server fallback,
   deliberately never used (keeps keys out of URLs).
 
-## 5. Deliberate non-goals
+## 5. Zoho Inventory behaviors that remain UNVERIFIED
+
+Full table with consequences: `docs/providers/zoho-inventory.md`. Summary:
+
+- **Sales-order status enum** - not enumerated on the checked pages (only
+  `fulfilled` appears in an example), so `status.label` is a humanized form of
+  the raw code rather than a guessed membership list.
+- **`salesorder_ids` marked Required on the list endpoint** - it sits in the same
+  parameter table as `page`/`per_page`, but a plain list has no ids to supply and
+  the documented response returns the full list plus `page_context`. The adapter
+  sends only `organization_id`, `page`, `per_page`; if a Zoho account ever
+  rejects that, the documented `400` path applies and is already handled.
+- **No status/date/customer filter is documented** for sales orders, so the tool
+  offers none - an agent pages and filters client-side. The tool description says
+  so explicitly.
+- **Maximum `per_page`** - undocumented (default 200 only); the tool caps at 500
+  as a connector-imposed bound.
+- **Data centers `.jp`, `.sa`, `.com.cn`** - API hosts are documented, OAuth
+  hosts are not, so these are rejected at config validation rather than guessed.
+- **Token-exchange wire format** - Zoho's example puts parameters in the URL;
+  we send an RFC 6749 form body so `client_secret`/`refresh_token` never reach a
+  URL. This is the one deliberate deviation from the doc example.
+- **Authorization-code flow and refresh-token rotation** - a one-time operator
+  step, not automated; a revoked grant surfaces as `AUTHENTICATION_ERROR`.
+
+## 6. Deliberate non-goals
 
 Per AGENTS.md §3: no frontend, database, user accounts, billing, Kubernetes,
 microservices, cloud deployment, webhooks, background jobs, distributed queues,
 dashboards, model hosting, or complex caching.
 
-## 6. Accepted trade-offs
+## 7. Accepted trade-offs
 
 | Trade-off | Why accepted |
 |---|---|
@@ -69,7 +94,7 @@ dashboards, model hosting, or complex caching.
 | Only stdio transport is wired | Streamable HTTP is designed for (`createConnectorServer` is transport-agnostic) but no host requires it yet. |
 | Unicommerce API paths | Token endpoint verified from official docs; sale-order search/get paths are **UNVERIFIED**, so no code was written. See `docs/providers/unicommerce.md`. |
 
-## 7. What a reviewer should not assume
+## 8. What a reviewer should not assume
 
 - The connector does not retry non-idempotent or semantic failures, and never
   writes merchant state.
